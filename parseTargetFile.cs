@@ -11,7 +11,7 @@ namespace BuggyExchange
         int numTargetCars = 0;
         string[] frameTypes2;
         float[] framePositions2X, framePositions2Y, framePositions2Z;
-        float[] map2X, map2Y; //drawing positions of cars
+        float[] buggyDraw2X, buggyDraw2Y; //drawing positions of cars
         float[] frameRotations2X, frameRotations2Y, frameRotations2Z;
 
 
@@ -53,8 +53,8 @@ namespace BuggyExchange
             framePositions2X = new float[numTargetCars];
             framePositions2Y = new float[numTargetCars];
             framePositions2Z = new float[numTargetCars];
-            map2X = new float[numTargetCars];
-            map2Y = new float[numTargetCars];
+            buggyDraw2X = new float[numTargetCars];
+            buggyDraw2Y = new float[numTargetCars];
             frameRotations2X = new float[numTargetCars];
             frameRotations2Y = new float[numTargetCars];
             frameRotations2Z = new float[numTargetCars];
@@ -84,7 +84,7 @@ namespace BuggyExchange
                 return;
             }
 
-            FrameLocationArray2 = getVectorArray2(Encoding.ASCII.GetBytes("FrameLocationArray"), 147);
+            FrameLocationArray2 = getVectorArray2(Encoding.ASCII.GetBytes("FrameLocationArray"), 147, numTargetCars);
 
             i = 0;
             pos = found + 147;
@@ -99,19 +99,6 @@ namespace BuggyExchange
                 i++;
             }
 
-            float mapScale = pictureBox1.Width / 400000f;
-            float cX = pictureBox1.Width / 2f;
-            float cY = pictureBox1.Width / 2f;
-
-            for (int c = 0; c < numTargetCars; c++)
-            {
-                //calculate the map positions of the cars.
-                map2X[c] = cX - (framePositions2X[c] * mapScale);
-                map2Y[c] = cY - (framePositions2Y[c] * mapScale);
-                //Debug.WriteLine(map2X[c].ToString() + ", " + map2Y[c].ToString());
-            }
-
-
 
             //-------------------------------------------
             // Rotations
@@ -124,7 +111,7 @@ namespace BuggyExchange
                 return;
             }
 
-            FrameRotationArray2 = getVectorArray2(Encoding.ASCII.GetBytes("FrameRotationArray"), 148);
+            FrameRotationArray2 = getVectorArray2(Encoding.ASCII.GetBytes("FrameRotationArray"), 148, numTargetCars);
 
             i = 0;
             pos = found + 148;
@@ -208,7 +195,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //SmokestackTypeArray (Int)
-            SmokestackTypeArray2 = getIntArray2(SmokestackTypeHeader, SmokestackTypeLenPos);
+            SmokestackTypeArray2 = getIntArray2(SmokestackTypeHeader, SmokestackTypeLenPos, numTargetCars);
             if (SmokestackTypeArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse Smokestacks.");
@@ -217,7 +204,7 @@ namespace BuggyExchange
             }
             //--------------------------------------------------------------------------------------------------------
             //HeadlightTypeArray (Int)
-            HeadlightTypeArray2 = getIntArray2(HeadlightTypeHeader, HeadlightTypeLenPos);
+            HeadlightTypeArray2 = getIntArray2(HeadlightTypeHeader, HeadlightTypeLenPos, numTargetCars);
             if (HeadlightTypeArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse Headlights.");
@@ -226,7 +213,7 @@ namespace BuggyExchange
             }
             //--------------------------------------------------------------------------------------------------------
             //PaintTypeArray (Int)
-            PaintTypeArray2 = getIntArray2(PaintTypeHeader, PaintTypeLenPos, true);
+            PaintTypeArray2 = getIntArray2(PaintTypeHeader, PaintTypeLenPos, numTargetCars, true);
             if (PaintTypeArray2 == null || PaintTypeArray2.Length == 0)
             {
                 this.Text = "Parsing File...";
@@ -243,7 +230,7 @@ namespace BuggyExchange
             }
             //--------------------------------------------------------------------------------------------------------
             //BoilerFuelAmountArray (float)
-            BoilerFuelAmountArray2 = getIntArray2(BoilerFuelAmountHeader, BoilerFuelAmountLenPos);
+            BoilerFuelAmountArray2 = getIntArray2(BoilerFuelAmountHeader, BoilerFuelAmountLenPos, numTargetCars);
             if (BoilerFuelAmountArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse BoilerFuelAmount.");
@@ -253,7 +240,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //BoilerFireTempArray (float)
-            BoilerFireTempArray2 = getIntArray2(BoilerFireTempHeader, BoilerFireTempLenPos);
+            BoilerFireTempArray2 = getIntArray2(BoilerFireTempHeader, BoilerFireTempLenPos, numTargetCars);
             if (BoilerFireTempArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse BoilerFireTemp.");
@@ -263,7 +250,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //BoilerWaterTempArray (float)
-            BoilerWaterTempArray2 = getIntArray2(BoilerWaterTempHeader, BoilerWaterTempLenPos);
+            BoilerWaterTempArray2 = getIntArray2(BoilerWaterTempHeader, BoilerWaterTempLenPos, numTargetCars);
             if (BoilerWaterTempArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse BoilerWaterTemp.");
@@ -273,7 +260,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //BoilerWaterLevelArray (float)
-            BoilerWaterLevelArray2 = getIntArray2(BoilerWaterLevelHeader, BoilerWaterLevelLenPos);
+            BoilerWaterLevelArray2 = getIntArray2(BoilerWaterLevelHeader, BoilerWaterLevelLenPos, numTargetCars);
             if (BoilerWaterLevelArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse BoilerWaterLevel.");
@@ -283,7 +270,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //BoilerPressureArray (float)
-            BoilerPressureArray2 = getIntArray2(BoilerPressureHeader, BoilerPressureLenPos);
+            BoilerPressureArray2 = getIntArray2(BoilerPressureHeader, BoilerPressureLenPos, numTargetCars);
             if (BoilerPressureArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse BoilerPressure.");
@@ -293,7 +280,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //HeadlightFrontStateArray (bool)
-            HeadlightFrontStateArray2 = getBoolArray2(HeadlightFrontStateHeader, HeadlightFrontStateLenPos);
+            HeadlightFrontStateArray2 = getBoolArray2(HeadlightFrontStateHeader, HeadlightFrontStateLenPos, numTargetCars);
             if (HeadlightFrontStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse HeadlightFrontState.");
@@ -303,7 +290,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //HeadlightRearStateArray (bool)
-            HeadlightRearStateArray2 = getBoolArray2(HeadlightRearStateHeader, HeadlightRearStateLenPos);
+            HeadlightRearStateArray2 = getBoolArray2(HeadlightRearStateHeader, HeadlightRearStateLenPos, numTargetCars);
             if (HeadlightRearStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse HeadlightRearState.");
@@ -313,7 +300,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //CouplerFrontStateArray (bool)
-            CouplerFrontStateArray2 = getBoolArray2(CouplerFrontStateHeader, CouplerFrontStateLenPos);
+            CouplerFrontStateArray2 = getBoolArray2(CouplerFrontStateHeader, CouplerFrontStateLenPos, numTargetCars);
             if (CouplerFrontStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse CouplerFrontState.");
@@ -323,7 +310,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //CouplerRearStateArray (bool)
-            CouplerRearStateArray2 = getBoolArray2(CouplerRearStateHeader, CouplerRearStateLenPos);
+            CouplerRearStateArray2 = getBoolArray2(CouplerRearStateHeader, CouplerRearStateLenPos, numTargetCars);
             if (CouplerRearStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse CouplerRearState.");
@@ -333,7 +320,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //TenderFuelAmountArray (float)
-            TenderFuelAmountArray2 = getIntArray2(TenderFuelAmountHeader, TenderFuelAmountLenPos);
+            TenderFuelAmountArray2 = getIntArray2(TenderFuelAmountHeader, TenderFuelAmountLenPos, numTargetCars);
             if (TenderFuelAmountArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse TenderFuelAmount.");
@@ -343,7 +330,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //TenderWaterAmountArray (float)
-            TenderWaterAmountArray2 = getIntArray2(TenderWaterAmountHeader, TenderWaterAmountLenPos);
+            TenderWaterAmountArray2 = getIntArray2(TenderWaterAmountHeader, TenderWaterAmountLenPos, numTargetCars);
             if (TenderWaterAmountArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse TenderWaterAmount.");
@@ -354,7 +341,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //CompressorAirPressureArray (float)
-            CompressorAirPressureArray2 = getIntArray2(CompressorAirPressureHeader, CompressorAirPressureLenPos);
+            CompressorAirPressureArray2 = getIntArray2(CompressorAirPressureHeader, CompressorAirPressureLenPos, numTargetCars);
             if (CompressorAirPressureArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse CompressorAirPressure.");
@@ -365,7 +352,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //MarkerLightsFrontRightStateArray (Int)
-            MarkerLightsFrontRightStateArray2 = getIntArray2(MarkerLightsFrontRightStateHeader, MarkerLightsFrontRightStateLenPos);
+            MarkerLightsFrontRightStateArray2 = getIntArray2(MarkerLightsFrontRightStateHeader, MarkerLightsFrontRightStateLenPos, numTargetCars);
             if (MarkerLightsFrontRightStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse MarkerLightsFrontRightState.");
@@ -375,7 +362,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //MarkerLightsFrontLeftStateArray (Int)
-            MarkerLightsFrontLeftStateArray2 = getIntArray2(MarkerLightsFrontLeftStateHeader, MarkerLightsFrontLeftStateLenPos);
+            MarkerLightsFrontLeftStateArray2 = getIntArray2(MarkerLightsFrontLeftStateHeader, MarkerLightsFrontLeftStateLenPos, numTargetCars);
             if (MarkerLightsFrontLeftStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse MarkerLightsFrontLeftState.");
@@ -385,7 +372,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //MarkerLightsRearRightStateArray (Int)
-            MarkerLightsRearRightStateArray2 = getIntArray2(MarkerLightsRearRightStateHeader, MarkerLightsRearRightStateLenPos);
+            MarkerLightsRearRightStateArray2 = getIntArray2(MarkerLightsRearRightStateHeader, MarkerLightsRearRightStateLenPos, numTargetCars);
             if (MarkerLightsRearRightStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse MarkerLightsRearRightState.");
@@ -395,7 +382,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //MarkerLightsRearLeftStateArray (Int)
-            MarkerLightsRearLeftStateArray2 = getIntArray2(MarkerLightsRearLeftStateHeader, MarkerLightsRearLeftStateLenPos);
+            MarkerLightsRearLeftStateArray2 = getIntArray2(MarkerLightsRearLeftStateHeader, MarkerLightsRearLeftStateLenPos, numTargetCars);
             if (MarkerLightsRearLeftStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse MarkerLightsRearLeftState.");
@@ -405,7 +392,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //MarkerLightsCenterStateArray (Int)
-            MarkerLightsCenterStateArray2 = getIntArray2(MarkerLightsCenterStateHeader, MarkerLightsCenterStateLenPos);
+            MarkerLightsCenterStateArray2 = getIntArray2(MarkerLightsCenterStateHeader, MarkerLightsCenterStateLenPos, numTargetCars);
             if (MarkerLightsCenterStateArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse MarkerLightsCenterState.");
@@ -415,7 +402,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //FreightAmountArray (Int)
-            FreightAmountArray2 = getIntArray2(FreightAmountHeader, FreightAmountLenPos);
+            FreightAmountArray2 = getIntArray2(FreightAmountHeader, FreightAmountLenPos, numTargetCars);
             if (FreightAmountArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse FreightAmount.");
@@ -425,7 +412,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //RegulatorValueArray (float)
-            RegulatorValueArray2 = getIntArray2(RegulatorValueHeader, RegulatorValueLenPos);
+            RegulatorValueArray2 = getIntArray2(RegulatorValueHeader, RegulatorValueLenPos, numTargetCars);
             if (RegulatorValueArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse RegulatorValue.");
@@ -435,7 +422,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //BrakeValueArray (float)
-            BrakeValueArray2 = getIntArray2(BrakeValueHeader, BrakeValueLenPos);
+            BrakeValueArray2 = getIntArray2(BrakeValueHeader, BrakeValueLenPos, numTargetCars);
             if (BrakeValueArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse BrakeValue.");
@@ -445,7 +432,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //GeneratorValveValueArray (float)
-            GeneratorValveValueArray2 = getIntArray2(GeneratorValveValueHeader, GeneratorValveValueLenPos);
+            GeneratorValveValueArray2 = getIntArray2(GeneratorValveValueHeader, GeneratorValveValueLenPos, numTargetCars);
             if (GeneratorValveValueArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse GeneratorValveValue.");
@@ -455,7 +442,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //CompressorValveValueArray (float)
-            CompressorValveValueArray2 = getIntArray2(CompressorValveValueHeader, CompressorValveValueLenPos);
+            CompressorValveValueArray2 = getIntArray2(CompressorValveValueHeader, CompressorValveValueLenPos, numTargetCars);
             if (CompressorValveValueArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse CompressorValveValue.");
@@ -465,7 +452,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //ReverserValueArray (float)
-            ReverserValueArray2 = getIntArray2(ReverserValueHeader, ReverserValueLenPos);
+            ReverserValueArray2 = getIntArray2(ReverserValueHeader, ReverserValueLenPos, numTargetCars);
             if (ReverserValueArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse ReverserValue.");
@@ -476,7 +463,7 @@ namespace BuggyExchange
 
             //--------------------------------------------------------------------------------------------------------
             //SanderAmountArray (float)
-            SanderAmountArray2 = getIntArray2(SanderAmountHeader, SanderAmountLenPos, true);
+            SanderAmountArray2 = getIntArray2(SanderAmountHeader, SanderAmountLenPos, numTargetCars, true);
             if (SanderAmountArray2.Length == 0)
             {
                 MessageBox.Show("Error reading file: cannot parse SanderAmount.");
@@ -484,17 +471,17 @@ namespace BuggyExchange
                 return;
             }
 
-            for (int k = 0; k < checkedListBox2.Items.Count; k++)
-                checkedListBox2.SetItemChecked(k, true);
-
-            showBuggiesOnMap();
+            //showBuggiesOnMap();
             this.Text = "File Loaded. " + checkedListBox2.Items.Count.ToString() + " buggies found.";
+
+            getTreeListFromMapSave();
+            parseTracksNow();
         }
 
 
-        byte[][] getIntArray2(byte[] header, int ign, bool silent = false, bool debug = false)
+        byte[][] getIntArray2(byte[] header, int ign, int size, bool silent = false, bool debug = false)
         {
-            byte[][] arrTemp = new byte[numTargetCars][];
+            byte[][] arrTemp = new byte[size][];
             //find location of trigger text in file, jump ahead by offset, gather each int
             int found = findBytesInBytes2(header, ign);
             if (found == -1)
@@ -512,7 +499,7 @@ namespace BuggyExchange
             int offset = header.Length + 4; //do we need an offset from the found position?
 
             int pos = found + offset;
-            for (int i = 0; i < numTargetCars; i++)
+            for (int i = 0; i < size; i++)
             { //for each car, check to see if there is a name or not
                 arrTemp[i] = new byte[4];
                 for (int j = 0; j < 4; j++)
@@ -524,10 +511,10 @@ namespace BuggyExchange
         }
 
 
-        byte[][] getVectorArray2(byte[] header, int offset)
+        byte[][] getVectorArray2(byte[] header, int offset, int size)
         {
             int ign = header.Length + 4;//just set ign to greater than the length... we're not searching for the entire header this time
-            byte[][] arrTemp = new byte[numTargetCars][];
+            byte[][] arrTemp = new byte[size][];
             //find location of trigger text in file, jump ahead by offset, gather each int
             int found = findBytesInBytes2(header, ign);
             if (found == -1)
@@ -538,8 +525,8 @@ namespace BuggyExchange
                 return null; //new byte[0][];//an empty array is a problem reading the file and should stop the attempt to read
             }
 
-            int pos = found + offset; //NOTE: the 147 is a hardcoded offset from the header start to the data start
-            for (int i = 0; i < numTargetCars; i++)
+            int pos = found + offset; //NOTE: the offset is a hardcoded offset from the header start to the data start
+            for (int i = 0; i < size; i++)
             { //for each car, check to see if there is a name or not
                 arrTemp[i] = new byte[12];
                 for (int j = 0; j < 12; j++)
@@ -550,9 +537,9 @@ namespace BuggyExchange
             return arrTemp;
         }
 
-        byte[] getBoolArray2(byte[] header, int ign, bool debug = false)
+        byte[] getBoolArray2(byte[] header, int ign, int size, bool debug = false)
         {
-            byte[] arrTemp = new byte[numTargetCars];
+            byte[] arrTemp = new byte[size];
             //find location of trigger text in file, jump ahead by offset, gather each int
             int found = findBytesInBytes2(header, ign);
             if (found == -1)
@@ -567,7 +554,7 @@ namespace BuggyExchange
             int offset = header.Length + 4; //do we need an offset from the found position?
 
             int pos = found + offset;
-            for (int i = 0; i < numTargetCars; i++)
+            for (int i = 0; i < size; i++)
             { //for each car, check to see if there is a name or not
                 arrTemp[i] = buff2[pos];
                 if (debug) Debug.WriteLine("Checking @ " + pos.ToString() + " = " + (arrTemp[i] == 1).ToString());

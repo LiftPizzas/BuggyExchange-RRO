@@ -63,6 +63,16 @@ namespace BuggyExchange.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap reliefmap {
+            get {
+                object obj = ResourceManager.GetObject("reliefmap", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap rro_map {
             get {
                 object obj = ResourceManager.GetObject("rro_map", resourceCulture);
@@ -77,6 +87,16 @@ namespace BuggyExchange.Properties {
             get {
                 object obj = ResourceManager.GetObject("rro_map_gray", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] treevectors {
+            get {
+                object obj = ResourceManager.GetObject("treevectors", resourceCulture);
+                return ((byte[])(obj));
             }
         }
     }

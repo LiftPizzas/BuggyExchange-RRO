@@ -897,11 +897,15 @@ namespace BuggyExchange
                 for (int i = 0; i < outputBytes.Count; i++) finalOutput[lengthA + i] = (byte)(outputBytes[i]);
                 for (int i = 0; i < lengthC; i++) finalOutput[lengthA + outputBytes.Count + i] = (byte)(buff[i + startC ]);
 
-                if (File.Exists(saveFileDialog1.FileName))
-                    if (MessageBox.Show("Overwrite File " + saveFileDialog1.FileName,"Overwrite?",MessageBoxButtons.OKCancel) == DialogResult.Cancel) return;
+                string outfile = "";
+                if (saveIndex == 0) outfile = saveFileDialog1.InitialDirectory + @"\" + saveFileDialog1.FileName;
+                else outfile = saveFileDialog1.InitialDirectory + @"\" + "slot" + saveIndex.ToString() + ".sav";
 
-                File.WriteAllBytes(saveFileDialog1.FileName, finalOutput);
-                MessageBox.Show(saveFileDialog1.FileName + " Saved!");
+                if (File.Exists(outfile))
+                    if (MessageBox.Show("Overwrite File?\n" + outfile,"Overwrite?",MessageBoxButtons.OKCancel) == DialogResult.Cancel) return;
+
+                File.WriteAllBytes(outfile, finalOutput);
+                MessageBox.Show(outfile + "\nSaved!");
 
                 colorSlots();
 

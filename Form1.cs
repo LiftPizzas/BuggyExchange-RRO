@@ -1,6 +1,7 @@
 using BuggyExchange.Properties;
 using Microsoft.VisualBasic.Devices;
 using System.Diagnostics;
+using System.Numerics;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
@@ -18,16 +19,38 @@ namespace BuggyExchange
 {
     public partial class Form1 : Form
     {
+        int saveIndex = 0;
+
+        byte[] buff;
+        int numSourceCars = 0;
+        string[] frameTypes;
+        float[] framePositionsX, framePositionsY, framePositionsZ;
+        float[] buggyDrawX, buggyDrawY; //drawing positions of cars
+        float[] frameRotationsX, frameRotationsY, frameRotationsZ;
+        Bitmap map, minimap;
+        float lastMouseX, lastMouseY;
+        int nearestBuggy = -1;
+
+
+
+
+
+
+        //float zoomAmount = 1f;
+        float totalZoom;
+        //bool scaleInvalid = false; //set this to true if scale needs to be recalculated for all the drawing stuff.
+
+
 
         public void ClickLabel(Object sender, System.EventArgs e)
         {
-            
             Label btn = (Label)sender;
             for (int i = 0; i < 11; i++)
             {
                 lblSlot[i].BorderStyle = BorderStyle.FixedSingle;
                 //lblSlot[i].BackColor = SystemColors.Control;
             }
+            saveIndex = int.Parse(btn.Tag.ToString());
             colorSlots();
             btn.BorderStyle = BorderStyle.None;
             btn.BackColor = Color.LightBlue;
@@ -50,11 +73,18 @@ namespace BuggyExchange
         {
             InitializeComponent();
             setHeaders();
+            this.pictureBox1.MouseWheel += new System.Windows.Forms.MouseEventHandler(this.pictureBox2_MouseWheel);
+            this.pictureBox2.MouseWheel += new System.Windows.Forms.MouseEventHandler(this.pictureBox2_MouseWheel);
+
+            this.KeyPreview = true;
             checkedListBox1.Items.Clear();
             //checkedListBox1.Items.Add("Nothing yet...");
             map = new Bitmap(pictureBox1.Width, pictureBox1.Height);
+            minimap = new Bitmap(pictureBox2.Width, pictureBox2.Height);
 
-            
+
+
+            getAllTreesFromFile();
 
             //parseSaveNow(@"C:\Users\abc\AppData\Local\arr\Saved\SaveGames/slot1.sav");
 
@@ -101,7 +131,7 @@ namespace BuggyExchange
                     saveFileDialog1.InitialDirectory = openFileDialog1.InitialDirectory;
                 }
             }
-            
+
             openFileDialog1.Filter = "Sav files (*.sav)|*.sav";
             saveFileDialog1.FileName = "New Buggies.sav";
 
@@ -130,7 +160,19 @@ namespace BuggyExchange
 
             colorSlots();
 
+
+
+
+            setZoomRectangle();
+            scaleChanged();
             //System.Diagnostics.Process.Start("explorer.exe", Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\arr\Saved\SaveGames");
+
+        }
+
+
+
+        private void pictureBox1_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
 
         }
 
@@ -179,20 +221,7 @@ namespace BuggyExchange
             if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
         }
 
-        byte[] buff;
-        int numSourceCars = 0;
-        string[] frameTypes;
-        float[] framePositionsX, framePositionsY, framePositionsZ;
-        float[] mapX, mapY; //drawing positions of cars
-        float[] frameRotationsX, frameRotationsY, frameRotationsZ;
-        Bitmap map;
 
-       
-
-
-
-        float lastMouseX, lastMouseY;
-        int nearestBuggy = -1;
 
         private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -207,12 +236,44 @@ namespace BuggyExchange
 
         }
 
+        //adds or subtracts trees based on user mouse position and other settings
+        void addTreesPaint(float x, float y)
+        {
+            Math.Clamp(x, 0f, 850f);
+            Math.Clamp(y, 0f, 850f);
+
+            //need to calculate zoomed position based on current zoom rectangle
+            //left of the picturebox is total map size scaled to 0-1
+            float mapLeft = (zoomLeft * 400000f) - 200000f;
+            float mapx = mapLeft + (((x / 850f) * (zoomRight - zoomLeft)) * 400000f);
+            float mapTop = (zoomTop * 400000f) - 200000f;
+            float mapy = mapTop + (((y / 850f) * (zoomBottom - zoomTop)) * 400000f);
+            //this.Text = mapx.ToString("0.00") + " " + mapy.ToString("0.00");
+
+            //find any trees within a given radius of this place:
+            //get the regions using 8 points in radius to ensure we don't miss any.
+
+            bool rem = checkBoxRemoveTrees.Checked;
+            removeRadiusTrees(-mapx, -mapy, trackBar1.Value * 100, rem);
+            //removeNearestTree(-mapx, -mapy);
+            showBuggiesOnMap();
+        }
+
+        bool treeDragging = false;
+
         int dragging = 0;
         float dragX, dragY;
         float dx1, dx2, dy1, dy2; //drag rectangle positions for drawing
 
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
+            if (checkBoxAddTrees.Checked || checkBoxRemoveTrees.Checked)
+            {
+                treeDragging = true;
+                addTreesPaint(e.X, e.Y);
+                return;
+            }
+
             dragging = 0;
             if (e.Button == MouseButtons.Right)
             {
@@ -223,7 +284,15 @@ namespace BuggyExchange
                     dragY = e.Y;
                 }
                 else
+                {
                     dragging = 2; //deselect nearest one
+                    if (nearestBuggy > -1)
+                    {
+                        checkedListBox1.SelectedIndex = nearestBuggy;
+                        checkedListBox1.SetItemChecked(nearestBuggy, false);
+                    }
+                }
+
             }
 
             if (e.Button == MouseButtons.Left)
@@ -235,7 +304,14 @@ namespace BuggyExchange
                     dragY = e.Y;
                 }
                 else
+                {
                     dragging = 1; //select nearest one
+                    if (nearestBuggy > -1)
+                    {
+                        checkedListBox1.SelectedIndex = nearestBuggy;
+                        checkedListBox1.SetItemChecked(nearestBuggy, true);
+                    }
+                }
             }
 
         }
@@ -243,12 +319,21 @@ namespace BuggyExchange
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
             //if dragging, make sure everything inside the rectangle is checked before disabling the drag flag
-
+            treeDragging = false;
             dragging = 0;
         }
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
+            if (treeDragging)
+            {
+                if (checkBoxAddTrees.Checked || checkBoxRemoveTrees.Checked)
+                {
+                    addTreesPaint(e.X, e.Y);
+                    return;
+                }
+            }
+
             //if (checkedListBox1.Items.Count == 0) return;
             //if (numSourceCars == 0) return;
             lastMouseX = e.X;
@@ -259,8 +344,8 @@ namespace BuggyExchange
             float nearest = 999999f;
             for (int i = 0; i < numSourceCars; i++)
             {
-                float dx = lastMouseX - mapX[i];
-                float dy = lastMouseY - mapY[i];
+                float dx = lastMouseX - buggyDrawX[i];
+                float dy = lastMouseY - buggyDrawY[i];
                 dist = dx * dx + dy * dy;
 
 
@@ -303,8 +388,8 @@ namespace BuggyExchange
 
                 for (int i = 0; i < numSourceCars; i++)
                 {
-                    if (mapX[i] >= dx1 && mapX[i] <= dx2)
-                        if (mapY[i] >= dy1 && mapY[i] <= dy2)
+                    if (buggyDrawX[i] >= dx1 && buggyDrawX[i] <= dx2)
+                        if (buggyDrawY[i] >= dy1 && buggyDrawY[i] <= dy2)
                             checkedListBox1.SetItemChecked(i, toCheck);
                 }
             }
@@ -325,40 +410,187 @@ namespace BuggyExchange
         private void pictureBox1_Paint(object sender, PaintEventArgs e) { }
 
 
+        //call this whenever scale needs to be recalculated.
+        void scaleChanged()
+        {
+            float mapMax = 200000f, mapMax2 = 400000f;
+            //using the zoom rectangle dragged out in picture2, determine our scale and offsets
+            totalZoom = 850f / (zoomRight - zoomLeft);
+
+            label6.Text = "Zoom = " + (totalZoom / 850f).ToString("0.00");
+
+            //source cars
+            for (int c = 0; c < numSourceCars; c++)
+            {
+                //calculate the map positions of the cars.
+                buggyDrawX[c] = ((((-framePositionsX[c] + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                buggyDrawY[c] = ((((-framePositionsY[c] + mapMax) / mapMax2) - zoomTop) * totalZoom);
+            }
+
+            //map cars
+            for (int c = 0; c < numTargetCars; c++)
+            {
+                //calculate the map positions of the cars.
+                buggyDraw2X[c] = ((((-framePositions2X[c] + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                buggyDraw2Y[c] = ((((-framePositions2Y[c] + mapMax) / mapMax2) - zoomTop) * totalZoom);
+            }
+
+            //rescale all the drawing positions:
+            for (int i = 0; i < treePos.Length; i++)
+            {
+                treeDraw[i].X = ((((-treePos[i].X + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                treeDraw[i].Y = ((((-treePos[i].Y + mapMax) / mapMax2) - zoomTop) * totalZoom);
+            }
+            //tracks:
+            for (int c = 0; c < numTracks; c++)
+            {
+                trackDrawStart[c].X = ((((-trackStart[c].X + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                trackDrawStart[c].Y = ((((-trackStart[c].Y + mapMax) / mapMax2) - zoomTop) * totalZoom);
+                tangentDrawStart[c].X = ((((-tangentStart[c].X + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                tangentDrawStart[c].Y = ((((-tangentStart[c].Y + mapMax) / mapMax2) - zoomTop) * totalZoom);
+                tangentDrawEnd[c].X = ((((-tangentEnd[c].X + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                tangentDrawEnd[c].Y = ((((-tangentEnd[c].Y + mapMax) / mapMax2) - zoomTop) * totalZoom);
+                trackDrawEnd[c].X = ((((-trackEnd[c].X + mapMax) / mapMax2) - zoomLeft) * totalZoom);
+                trackDrawEnd[c].Y = ((((-trackEnd[c].Y + mapMax) / mapMax2) - zoomTop) * totalZoom);
+            }
+
+            //recalculate the background image drawing points
+
+            //if scale changed, everything needs to be redrawn
+            showBuggiesOnMap();
+
+        }
+
+        Pen trackPen = new Pen(Color.Beige, 2f);
+        Pen handlePen = new Pen(Color.Red, 2f);
+        Pen handlePen2 = new Pen(Color.Blue, 2f);
+        Pen handlePen3 = new Pen(Color.White, 3f);
         Brush bRed = new SolidBrush(Color.Red);
+        Brush bDarkRed = new SolidBrush(Color.DarkRed);
         Brush bWhite = new SolidBrush(Color.White);
         Brush bYellow = new SolidBrush(Color.Yellow);
+        Brush bBlack = new SolidBrush(Color.Black);
+        Brush bTrees = new SolidBrush(Color.Green);
         private void showBuggiesOnMap()
         {
-            //if (checkedListBox1.Items.Count == 0) return;
-            
+            using (Graphics g = Graphics.FromImage(minimap))
+            {
+                g.Clear(Color.Black);
+                g.DrawImage(Resources.rro_map, 0, 0, 255, 255);
+                //int x = (int)(-drawOffsetX * 0.3 / zoomAmount);
+                //int y = (int)(-drawOffsetY * 0.3 / zoomAmount);
+                //g.DrawRectangle(trackPen, x, y, (255 / zoomAmount), (255 / zoomAmount));
+                g.DrawRectangle(trackPen, zoomLeft * 255f, zoomTop * 255f, (zoomRight - zoomLeft) * 255f, (zoomBottom - zoomTop) * 255f);
+            }
+            pictureBox2.Image = minimap;
+            pictureBox2.Refresh();
+
             //map = new Bitmap(Resources.ResourceManager. rro_map);
             using (Graphics g = Graphics.FromImage(map))
             {
-                g.DrawImage(Resources.rro_map_gray, 0, 0, 850, 850);
-                //g.Clear(Color.White);
+                g.Clear(Color.Black);
+                g.DrawImage(Resources.reliefmap, new Rectangle(0, 0, 850, 850), new Rectangle((int)(zoomLeft * 4000f), (int)(zoomTop * 4000f), (int)((zoomRight - zoomLeft) * 4000f), (int)((zoomBottom - zoomTop) * 4000f)), GraphicsUnit.Pixel);
+
+                //draw track segments
+                if (checkBox3.Checked)
+                {
+                    for (int i = 0; i < numTracks; i++)
+                    {
+                        g.FillRectangle(bBlack, trackDrawStart[i].X, trackDrawStart[i].Y, 5f, 5f);
+                        g.DrawBezier(handlePen3, trackDrawStart[i].X, trackDrawStart[i].Y, tangentDrawStart[i].X, tangentDrawStart[i].Y, tangentDrawEnd[i].X, tangentDrawEnd[i].Y, trackDrawEnd[i].X, trackDrawEnd[i].Y);
+                    }
+                }
 
                 //draw Target File's cars on the map
-                for (int i = 0; i < numTargetCars; i++)
-                        g.FillRectangle(bYellow, map2X[i], map2Y[i], 5f, 5f);
-
-                if (dragging == 3 || dragging == 4)
+                if (checkBox4.Checked)
                 {
-                    g.DrawRectangle(Pens.LightBlue, dx1, dy1, dx2 - dx1, dy2 - dy1);
+                    for (int i = 0; i < numTargetCars; i++)
+                        g.FillRectangle(bYellow, buggyDraw2X[i], buggyDraw2Y[i], 5f, 5f);
+
+                    if (dragging == 3 || dragging == 4)
+                    {
+                        g.DrawRectangle(Pens.LightBlue, dx1, dy1, dx2 - dx1, dy2 - dy1);
+                    }
                 }
+
 
                 //draw New cars on the map
-                for (int i = 0; i < numSourceCars; i++)
+                if (checkBox5.Checked)
                 {
-                    if (checkedListBox1.GetItemChecked(i))
-                        g.FillRectangle(bWhite, mapX[i], mapY[i], 3f, 3f);
+                    for (int i = 0; i < numSourceCars; i++)
+                    {
+                        if (checkedListBox1.GetItemChecked(i))
+                            g.FillRectangle(bWhite, buggyDrawX[i], buggyDrawY[i], 3f, 3f);
+                        else
+                            g.FillRectangle(bRed, buggyDrawX[i], buggyDrawY[i], 3f, 3f);
+                    }
+                    if (nearestBuggy > -1)
+                    {
+                        g.FillRectangle(new SolidBrush(Color.Blue), buggyDrawX[nearestBuggy], buggyDrawY[nearestBuggy], 5f, 5f);
+                    }
+                }
+
+
+                if (checkBox1.Checked) //only check once if we should draw the deleted trees, otherwise we're wasting time rechecking it
+                {
+                    if (checkBox2.Checked) //only check once if we should draw the deleted trees, otherwise we're wasting time rechecking it
+                    {
+                        //draw the trees:
+                        //add a checkbox to show/hide trees
+                        for (int i = 0; i < treeExists.Length; i++)
+                            if (treeExists[i])
+                                g.FillRectangle(bTrees, treeDraw[i].X, treeDraw[i].Y, 2, 2);
+                            else
+                                g.FillRectangle(bDarkRed, treeDraw[i].X, treeDraw[i].Y, 2, 2);
+                    }
                     else
-                        g.FillRectangle(bRed, mapX[i], mapY[i], 3f, 3f);
+                    {
+                        //draw the trees:
+                        //add a checkbox to show/hide trees
+                        for (int i = 0; i < treeExists.Length; i++)
+                            if (treeExists[i])
+                                g.FillRectangle(bTrees, treeDraw[i].X, treeDraw[i].Y, 2, 2);
+                    }
                 }
-                if (nearestBuggy > -1)
-                {
-                    g.FillRectangle(new SolidBrush(Color.Blue), mapX[nearestBuggy], mapY[nearestBuggy], 5f, 5f);
-                }
+
+
+                //bool han = false;
+                ////draw splines manually
+                //for (int i = 0; i < trackDrawStart.Length; i++)
+                //{
+                //    han = !han;
+                //    //longest possible segment is distance between start and end * pi
+                //    float dx, dy, dist;
+                //    dx = trackDrawStart[i].X - trackDrawEnd[i].X;
+                //    dy = trackDrawStart[i].Y - trackDrawEnd[i].Y;
+                //    dist = 1f / ((float)Math.Sqrt(dx * dx + dy * dy) * 0.0314159f);
+                //    float lastx = trackDrawStart[i].X, lasty = trackDrawStart[i].Y;
+
+                //    for (float w = 0f; w < 1f; w += dist)
+                //    {
+                //        //get the spline point at this location:
+                //        float ax = trackDrawStart[i].X + ((tangentDrawStart[i].X - trackDrawStart[i].X) * w);
+                //        float bx = tangentDrawStart[i].X + ((tangentDrawEnd[i].X - tangentDrawStart[i].X) * w);
+                //        float cx = tangentDrawEnd[i].X + ((trackDrawEnd[i].X - tangentDrawEnd[i].X )* w);
+                //        float ex = ax + ((bx - ax) * w);
+                //        float fx = bx + ((cx - bx) * w);
+                //        float gx = ex + ((fx - ex) * w);
+
+                //        float ay = trackDrawStart[i].Y + ((tangentDrawStart[i].Y - trackDrawStart[i].Y) * w);
+                //        float by = tangentDrawStart[i].Y + ((tangentDrawEnd[i].Y - tangentDrawStart[i].Y) * w);
+                //        float cy = tangentDrawEnd[i].Y + ((trackDrawEnd[i].Y - tangentDrawEnd[i].Y) * w);
+                //        float ey = ay + ((by - ay) * w);
+                //        float fy = by + ((cy - by) * w);
+                //        float gy = ey + ((fy - ey) * w);
+
+                //        g.FillRectangle(bBlack, gx, gy, 4, 4);
+                //        //each step along the path, draw a short line segment
+                //        if (han) g.DrawLine(handlePen, gx, gy, lastx, lasty);
+                //        else g.DrawLine(handlePen2, gx, gy, lastx, lasty);
+                //        lastx = gx;
+                //        lasty = gy;
+                //    }
+                //}
 
 
 
@@ -403,623 +635,278 @@ namespace BuggyExchange
 
 
 
-        void parseSaveNow(string file)
-        {
-            //need to find all of the rolling stock in the file, find "FrameTypeArray" in the file, number of cars in the save is at this position +58 bytes
-            buff = File.ReadAllBytes(file);
-
-            int found = findInBytes("FrameTypeArray");
-            if (found == -1)
-            {
-                MessageBox.Show("Unable to find 'FrameTypeArray' in this save file. Make sure you dropped a valid save file here.");
-                this.Text = "Invalid File - Try Again";
-                return;
-            }
-
-            checkedListBox1.Items.Clear();
-
-            //now we need to get the number of cars
-            numSourceCars = buff[found + 58] + (buff[found + 59] * 256);
-
-            if (numSourceCars == 0)
-            {
-                MessageBox.Show("Note: this save does not contain any buggies.");
-                return;
-            }
-
-            frameTypes = new string[numSourceCars];
-            framePositionsX = new float[numSourceCars];
-            framePositionsY = new float[numSourceCars];
-            framePositionsZ = new float[numSourceCars];
-            mapX = new float[numSourceCars];
-            mapY = new float[numSourceCars];
-            frameRotationsX = new float[numSourceCars];
-            frameRotationsY = new float[numSourceCars];
-            frameRotationsZ = new float[numSourceCars];
-            carShortName = new string[numSourceCars];
-            carShortNumber = new string[numSourceCars];
-            cargoShortName = new string[numSourceCars];
-
-            // CAR TYPES
-            int i = 0;
-            int pos = found + 66;
-            int l;
-            while (i < numSourceCars)
-            {
-                l = buff[pos - 4]; //this is the length of the string we're getting
-                frameTypes[i] = buffToString(pos, l);
-                checkedListBox1.Items.Add(" (" + frameTypes[i].Substring(0, frameTypes[i].Length - 1) + ")");
-                pos += l + 4;
-                i++;
-            }
-
-            //-------------------------------------------
-            // LOCATIONS
-            found = findInBytes("FrameLocationArray");
-            if (found == -1)
-            {
-                MessageBox.Show("Unable to find 'FrameLocationArray' in this save file. Make sure you dropped a valid save file here.");
-                this.Text = "Invalid File - Try Again";
-                checkedListBox1.Items.Clear();
-                return;
-            }
-
-            FrameLocationArray = getVectorArray(Encoding.ASCII.GetBytes( "FrameLocationArray"),147);
-
-            i = 0;
-            pos = found + 147;
-            while (i < numSourceCars)
-            {
-                framePositionsX[i] = System.BitConverter.ToSingle(buff, pos);
-                framePositionsY[i] = System.BitConverter.ToSingle(buff, pos + 4);
-                framePositionsZ[i] = System.BitConverter.ToSingle(buff, pos + 8);
-                //Debug.WriteLine(framePositionsX[i].ToString() + ", " + framePositionsY[i].ToString() + ", " + framePositionsZ[i].ToString());
-                //show these on the map so we can click them or highlight or something.
-                pos += 12;
-                i++;
-            }
-
-            float mapScale = pictureBox1.Width / 400000f;
-            float cX = pictureBox1.Width / 2f;
-            float cY = pictureBox1.Width / 2f;
-
-            for (int c = 0; c < numSourceCars; c++)
-            {
-                //calculate the map positions of the cars.
-                mapX[c] = cX - (framePositionsX[c] * mapScale);
-                mapY[c] = cY - (framePositionsY[c] * mapScale);
-                //Debug.WriteLine(mapX[c].ToString() + ", " + mapY[c].ToString());
-            }
-
-
-
-            //-------------------------------------------
-            // Rotations
-            found = findInBytes("FrameRotationArray");
-            if (found == -1)
-            {
-                MessageBox.Show("Unable to find 'FrameRotationArray' in this save file. Make sure you dropped a valid save file here.");
-                this.Text = "Invalid File - Try Again";
-                checkedListBox1.Items.Clear();
-                return;
-            }
-
-            FrameRotationArray = getVectorArray(Encoding.ASCII.GetBytes("FrameRotationArray"),148);
-
-            i = 0;
-            pos = found + 148;
-            while (i < numSourceCars)
-            {
-                frameRotationsX[i] = System.BitConverter.ToSingle(buff, pos);
-                frameRotationsY[i] = System.BitConverter.ToSingle(buff, pos + 4);
-                frameRotationsZ[i] = System.BitConverter.ToSingle(buff, pos + 8);
-                //Debug.WriteLine(frameRotationsX[i].ToString() + ", " + frameRotationsY[i].ToString() + ", " + frameRotationsZ[i].ToString());
-                //show these on the map so we can click them or highlight or something.
-                pos += 12;
-                i++;
-            }
-
-            //the rest of the file data is read in using standardized functions for each type
-
-            //FrameNumberArray (string)
-            FrameNumberArray = getStringArray(FrameNumberHeader, FrameNumberLenPos);
-            if (FrameNumberArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse buggy Numbers.");
-                return;
-            }
-            else
-            {
-                for (i = 0; i < numSourceCars; i++)
-                {
-                    if (FrameNumberArray[i].Length > 9)
-                        carShortNumber[i] = Encoding.ASCII.GetString(FrameNumberArray[i], 13, FrameNumberArray[i].Length - 14);
-                }
-
-            }
-
-            FrameNameArray = getStringArray(FrameNameHeader, FrameNameLenPos);
-            if (FrameNameArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse buggy Names.");
-                return;
-            }
-            else
-            {
-                for (i = 0; i < numSourceCars; i++)
-                    if (FrameNameArray[i].Length > 9)
-                        carShortName[i] = Encoding.ASCII.GetString(FrameNameArray[i], 13, FrameNameArray[i].Length - 14);
-            }
-
-            //Debug.WriteLine("Getting Cargo:");
-            //FreightTypeArray (string)
-            FreightTypeArray = getCargoArray(FreightTypeHeader, FreightTypeLenPos);
-            if (FreightTypeArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse Freight Types.");
-                return;
-            }
-            else
-            {
-                for (i = 0; i < numSourceCars; i++)
-                    if (FreightTypeArray[i].Length > 4)
-                        cargoShortName[i] = Encoding.ASCII.GetString(FreightTypeArray[i], 4, FreightTypeArray[i].Length - 5);
-            }
-            //Debug.WriteLine("Done Getting Cargo:");
-
-
-            //display these in the list
-            for (int j = 0; j < numSourceCars; j++)
-            {
-                string toadd = "";
-                if (carShortName[j] != null && carShortName[j].Length > 0)
-                {
-                    toadd = carShortName[j] + " ";
-                }
-                if (carShortNumber[j] != null && carShortNumber[j].Length > 0)
-                {
-                    toadd += "#" + carShortNumber[j] + " ";
-                }
-                if (cargoShortName[j] != null && cargoShortName[j].Length > 0)
-                    toadd += "[" + cargoShortName[j] + "]";
-
-                checkedListBox1.Items[j] = toadd + checkedListBox1.Items[j];
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //SmokestackTypeArray (Int)
-            SmokestackTypeArray = getIntArray(SmokestackTypeHeader, SmokestackTypeLenPos);
-            if (SmokestackTypeArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse Smokestacks.");
-                nearestBuggy = -1;
-                return;
-            }
-            //--------------------------------------------------------------------------------------------------------
-            //HeadlightTypeArray (Int)
-            HeadlightTypeArray = getIntArray(HeadlightTypeHeader, HeadlightTypeLenPos);
-            if (HeadlightTypeArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse Headlights.");
-                nearestBuggy = -1;
-                return;
-            }
-            //--------------------------------------------------------------------------------------------------------
-            //PaintTypeArray (Int)
-            PaintTypeArray = getIntArray(PaintTypeHeader, PaintTypeLenPos, true);
-            if (PaintTypeArray == null || PaintTypeArray.Length == 0)
-            {
-                this.Text = "Parsing File...";
-                //old saves don't contain paint data so we'll just add this in manually.
-                PaintTypeArray = new byte[numSourceCars][];
-                for (int j = 0; j < numSourceCars; j++)
-                {
-                    PaintTypeArray[j] = new byte[] { 0x00, 0x00, 0x00, 0x00 };
-                }
-
-                //MessageBox.Show("Error reading file: cannot parse PaintType.");
-                //nearestBuggy = -1;
-                //return;
-            }
-            //--------------------------------------------------------------------------------------------------------
-            //BoilerFuelAmountArray (float)
-            BoilerFuelAmountArray = getIntArray(BoilerFuelAmountHeader, BoilerFuelAmountLenPos);
-            if (BoilerFuelAmountArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse BoilerFuelAmount.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //BoilerFireTempArray (float)
-            BoilerFireTempArray = getIntArray(BoilerFireTempHeader, BoilerFireTempLenPos);
-            if (BoilerFireTempArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse BoilerFireTemp.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //BoilerWaterTempArray (float)
-            BoilerWaterTempArray = getIntArray(BoilerWaterTempHeader, BoilerWaterTempLenPos);
-            if (BoilerWaterTempArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse BoilerWaterTemp.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //BoilerWaterLevelArray (float)
-            BoilerWaterLevelArray = getIntArray(BoilerWaterLevelHeader, BoilerWaterLevelLenPos);
-            if (BoilerWaterLevelArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse BoilerWaterLevel.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //BoilerPressureArray (float)
-            BoilerPressureArray = getIntArray(BoilerPressureHeader, BoilerPressureLenPos);
-            if (BoilerPressureArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse BoilerPressure.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //HeadlightFrontStateArray (bool)
-            HeadlightFrontStateArray = getBoolArray(HeadlightFrontStateHeader, HeadlightFrontStateLenPos);
-            if (HeadlightFrontStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse HeadlightFrontState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //HeadlightRearStateArray (bool)
-            HeadlightRearStateArray = getBoolArray(HeadlightRearStateHeader, HeadlightRearStateLenPos);
-            if (HeadlightRearStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse HeadlightRearState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //CouplerFrontStateArray (bool)
-            CouplerFrontStateArray = getBoolArray(CouplerFrontStateHeader, CouplerFrontStateLenPos);
-            if (CouplerFrontStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse CouplerFrontState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //CouplerRearStateArray (bool)
-            CouplerRearStateArray = getBoolArray(CouplerRearStateHeader, CouplerRearStateLenPos);
-            if (CouplerRearStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse CouplerRearState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //TenderFuelAmountArray (float)
-            TenderFuelAmountArray = getIntArray(TenderFuelAmountHeader, TenderFuelAmountLenPos);
-            if (TenderFuelAmountArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse TenderFuelAmount.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //TenderWaterAmountArray (float)
-            TenderWaterAmountArray = getIntArray(TenderWaterAmountHeader, TenderWaterAmountLenPos);
-            if (TenderWaterAmountArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse TenderWaterAmount.");
-                nearestBuggy = -1;
-                return;
-            }
-
-
-            //--------------------------------------------------------------------------------------------------------
-            //CompressorAirPressureArray (float)
-            CompressorAirPressureArray = getIntArray(CompressorAirPressureHeader, CompressorAirPressureLenPos);
-            if (CompressorAirPressureArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse CompressorAirPressure.");
-                nearestBuggy = -1;
-                return;
-            }
-
-
-            //--------------------------------------------------------------------------------------------------------
-            //MarkerLightsFrontRightStateArray (Int)
-            MarkerLightsFrontRightStateArray = getIntArray(MarkerLightsFrontRightStateHeader, MarkerLightsFrontRightStateLenPos);
-            if (MarkerLightsFrontRightStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse MarkerLightsFrontRightState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //MarkerLightsFrontLeftStateArray (Int)
-            MarkerLightsFrontLeftStateArray = getIntArray(MarkerLightsFrontLeftStateHeader, MarkerLightsFrontLeftStateLenPos);
-            if (MarkerLightsFrontLeftStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse MarkerLightsFrontLeftState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //MarkerLightsRearRightStateArray (Int)
-            MarkerLightsRearRightStateArray = getIntArray(MarkerLightsRearRightStateHeader, MarkerLightsRearRightStateLenPos);
-            if (MarkerLightsRearRightStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse MarkerLightsRearRightState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //MarkerLightsRearLeftStateArray (Int)
-            MarkerLightsRearLeftStateArray = getIntArray(MarkerLightsRearLeftStateHeader, MarkerLightsRearLeftStateLenPos);
-            if (MarkerLightsRearLeftStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse MarkerLightsRearLeftState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //MarkerLightsCenterStateArray (Int)
-            MarkerLightsCenterStateArray = getIntArray(MarkerLightsCenterStateHeader, MarkerLightsCenterStateLenPos);
-            if (MarkerLightsCenterStateArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse MarkerLightsCenterState.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //FreightAmountArray (Int)
-            FreightAmountArray = getIntArray(FreightAmountHeader, FreightAmountLenPos);
-            if (FreightAmountArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse FreightAmount.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //RegulatorValueArray (float)
-            RegulatorValueArray = getIntArray(RegulatorValueHeader, RegulatorValueLenPos);
-            if (RegulatorValueArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse RegulatorValue.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //BrakeValueArray (float)
-            BrakeValueArray = getIntArray(BrakeValueHeader, BrakeValueLenPos);
-            if (BrakeValueArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse BrakeValue.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //GeneratorValveValueArray (float)
-            GeneratorValveValueArray = getIntArray(GeneratorValveValueHeader, GeneratorValveValueLenPos);
-            if (GeneratorValveValueArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse GeneratorValveValue.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //CompressorValveValueArray (float)
-            CompressorValveValueArray = getIntArray(CompressorValveValueHeader, CompressorValveValueLenPos);
-            if (CompressorValveValueArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse CompressorValveValue.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            //--------------------------------------------------------------------------------------------------------
-            //ReverserValueArray (float)
-            ReverserValueArray = getIntArray(ReverserValueHeader, ReverserValueLenPos);
-            if (ReverserValueArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse ReverserValue.");
-                nearestBuggy = -1;
-                return;
-            }
-
-
-            //--------------------------------------------------------------------------------------------------------
-            //SanderAmountArray (float)
-            SanderAmountArray = getIntArray(SanderAmountHeader, SanderAmountLenPos, true);
-            if (SanderAmountArray.Length == 0)
-            {
-                MessageBox.Show("Error reading file: cannot parse SanderAmount.");
-                nearestBuggy = -1;
-                return;
-            }
-
-            showBuggiesOnMap();
-            this.Text = "File Loaded. " + checkedListBox1.Items.Count.ToString() + " buggies found.";
-        }
-
-        byte[] convertHeader(string hex)
-        {
-            string[] all = hex.Split(' ');
-            byte[] tOut = new byte[all.Length];
-            for (int i = 0; i < all.Length; i++)
-                tOut[i] = byte.Parse(all[i], System.Globalization.NumberStyles.AllowHexSpecifier);
-
-            return tOut;
-        }
-
-        byte[] FrameLocationHeader;
-        byte[] FrameRotationHeader;
-        byte[] FrameTypeHeader;
-        byte[] FrameNameHeader;
-        byte[] FrameNumberHeader;
-        byte[] SmokestackTypeHeader;
-        byte[] HeadlightTypeHeader;
-        byte[] PaintTypeHeader;
-        byte[] BoilerFuelAmountHeader;
-        byte[] BoilerFireTempHeader;
-        byte[] BoilerWaterTempHeader;
-        byte[] BoilerWaterLevelHeader;
-        byte[] BoilerPressureHeader;
-        byte[] HeadlightFrontStateHeader;
-        byte[] HeadlightRearStateHeader;
-        byte[] CouplerFrontStateHeader;
-        byte[] CouplerRearStateHeader;
-        byte[] TenderFuelAmountHeader;
-        byte[] TenderWaterAmountHeader;
-        byte[] CompressorAirPressureHeader;
-        byte[] MarkerLightsFrontRightStateHeader;
-        byte[] MarkerLightsFrontLeftStateHeader;
-        byte[] MarkerLightsRearRightStateHeader;
-        byte[] MarkerLightsRearLeftStateHeader;
-        byte[] MarkerLightsCenterStateHeader;
-        byte[] FreightTypeHeader;
-        byte[] FreightAmountHeader;
-        byte[] RegulatorValueHeader;
-        byte[] BrakeValueHeader;
-        byte[] GeneratorValveValueHeader;
-        byte[] CompressorValveValueHeader;
-        byte[] ReverserValueHeader;
-        byte[] SanderAmountHeader;
-
-        int FrameLocationLenPos = 41;
-        int FrameRotationLenPos = 41;
-        int FrameTypeLenPos = 37;
-        int FrameNameLenPos = 37;
-        int FrameNumberLenPos = 39;
-        int SmokestackTypeLenPos = 42;
-        int HeadlightTypeLenPos = 41;
-        int PaintTypeLenPos = 37;
-        int BoilerFuelAmountLenPos = 44;
-        int BoilerFireTempLenPos = 42;
-        int BoilerWaterTempLenPos = 43;
-        int BoilerWaterLevelLenPos = 44;
-        int BoilerPressureLenPos = 42;
-        int HeadlightFrontStateLenPos = 47;
-        int HeadlightRearStateLenPos = 46;
-        int CouplerFrontStateLenPos = 45;
-        int CouplerRearStateLenPos = 44;
-        int TenderFuelAmountLenPos = 44;
-        int TenderWaterAmountLenPos = 45;
-        int CompressorAirPressureLenPos = 49;
-        int MarkerLightsFrontRightStateLenPos = 55;
-        int MarkerLightsFrontLeftStateLenPos = 54;
-        int MarkerLightsRearRightStateLenPos = 54;
-        int MarkerLightsRearLeftStateLenPos = 53;
-        int MarkerLightsCenterStateLenPos = 51;
-        int FreightTypeLenPos = 39;
-        int FreightAmountLenPos = 41;
-        int RegulatorValueLenPos = 42;
-        int BrakeValueLenPos = 38;
-        int GeneratorValveValueLenPos = 47;
-        int CompressorValveValueLenPos = 48;
-        int ReverserValueLenPos = 41;
-        int SanderAmountLenPos = 40;
-
-        string[] carShortName, carShortNumber, cargoShortName;
-
-
-        byte[][] FrameLocationArray;
-        byte[][] FrameRotationArray;
-        byte[][] FrameNameArray;
-        byte[][] FrameNumberArray;
-        byte[][] SmokestackTypeArray;
-        byte[][] HeadlightTypeArray;
-        byte[][] PaintTypeArray;
-        byte[][] BoilerFuelAmountArray;
-        byte[][] BoilerFireTempArray;
-        byte[][] BoilerWaterTempArray;
-        byte[][] BoilerWaterLevelArray;
-        byte[][] BoilerPressureArray;
-        byte[] HeadlightFrontStateArray;
-        byte[] HeadlightRearStateArray;
-        byte[] CouplerFrontStateArray;
-        byte[] CouplerRearStateArray;
-        byte[][] TenderFuelAmountArray;
-        byte[][] TenderWaterAmountArray;
-        byte[][] CompressorAirPressureArray;
-        byte[][] MarkerLightsFrontRightStateArray;
-        byte[][] MarkerLightsFrontLeftStateArray;
-        byte[][] MarkerLightsRearRightStateArray;
-        byte[][] MarkerLightsRearLeftStateArray;
-        byte[][] MarkerLightsCenterStateArray;
-        byte[][] FreightTypeArray;
-        byte[][] FreightAmountArray;
-        byte[][] RegulatorValueArray;
-        byte[][] BrakeValueArray;
-        byte[][] GeneratorValveValueArray;
-        byte[][] CompressorValveValueArray;
-        byte[][] ReverserValueArray;
-        byte[][] SanderAmountArray;
-
-        byte[][] FrameLocationArray2;
-        byte[][] FrameRotationArray2;
-        byte[][] FrameNameArray2;
-        byte[][] FrameNumberArray2;
-        byte[][] SmokestackTypeArray2;
-        byte[][] HeadlightTypeArray2;
-        byte[][] PaintTypeArray2;
-        byte[][] BoilerFuelAmountArray2;
-        byte[][] BoilerFireTempArray2;
-        byte[][] BoilerWaterTempArray2;
-        byte[][] BoilerWaterLevelArray2;
-        byte[][] BoilerPressureArray2;
-        byte[] HeadlightFrontStateArray2;
-        byte[] HeadlightRearStateArray2;
-        byte[] CouplerFrontStateArray2;
-        byte[] CouplerRearStateArray2;
-        byte[][] TenderFuelAmountArray2;
-        byte[][] TenderWaterAmountArray2;
-        byte[][] CompressorAirPressureArray2;
-        byte[][] MarkerLightsFrontRightStateArray2;
-        byte[][] MarkerLightsFrontLeftStateArray2;
-        byte[][] MarkerLightsRearRightStateArray2;
-        byte[][] MarkerLightsRearLeftStateArray2;
-        byte[][] MarkerLightsCenterStateArray2;
-        byte[][] FreightTypeArray2;
-        byte[][] FreightAmountArray2;
-        byte[][] RegulatorValueArray2;
-        byte[][] BrakeValueArray2;
-        byte[][] GeneratorValveValueArray2;
-        byte[][] CompressorValveValueArray2;
-        byte[][] ReverserValueArray2;
 
         private void button4_Click(object sender, EventArgs e)
         {
             System.Diagnostics.Process.Start("explorer.exe", Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\arr\Saved\SaveGames");
         }
 
-       
+
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            showBuggiesOnMap();
+        }
+
+        private void checkBox2_CheckedChanged(object sender, EventArgs e)
+        {
+            showBuggiesOnMap();
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.A && (Control.ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                for (int i = 0; i < checkedListBox1.Items.Count; i++)
+                    checkedListBox1.SetItemChecked(i, true);
+            }
+            if (e.KeyCode == Keys.D && (Control.ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                for (int i = 0; i < checkedListBox1.Items.Count; i++)
+                    checkedListBox1.SetItemChecked(i, false);
+            }
+
+            ////backspace re-zooms, and we might as well recenter so it actually fits
+            //if (e.KeyCode == Keys.Back)
+            //{
+            //    drawOffsetX = pictureBox1.Width / 2;
+            //    drawOffsetY = pictureBox1.Height / 2;
+            //    zoomAmount = 1f;
+            //    scaleChanged();
+            //}
+            ////enter recenters the map but doesn't re-zoom
+            //if (e.KeyCode == Keys.Enter)
+            //{
+            //    drawOffsetX = pictureBox1.Width / 2;
+            //    drawOffsetY = pictureBox1.Height / 2;
+            //    scaleChanged();
+            //}
+
+            //float scrollAmt = 10f;
+            ////if player moves we want to find the new center offset:
+            //if (e.KeyCode == Keys.Right)
+            //{
+            //    drawOffsetX += scrollAmt * zoomAmount;
+            //    if (drawOffsetX > 2000f) drawOffsetX = 2000f;
+            //    scaleChanged();
+            //}
+            //if (e.KeyCode == Keys.Left)
+            //{
+            //    drawOffsetX -= scrollAmt * zoomAmount;
+            //    if (drawOffsetX < -2000f) drawOffsetX = -2000f;
+            //    scaleChanged();
+            //}
+            //if (e.KeyCode == Keys.Down)
+            //{
+            //    drawOffsetY += scrollAmt * zoomAmount;
+            //    if (drawOffsetY > 2000f) drawOffsetY = 2000f;
+            //    scaleChanged();
+            //}
+            //if (e.KeyCode == Keys.Up)
+            //{
+            //    drawOffsetY -= scrollAmt * zoomAmount;
+            //    if (drawOffsetY < -2000f) drawOffsetY = -2000f;
+            //    scaleChanged();
+            //}
+
+        }
+
+        private void panel2_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            showBuggiesOnMap();
+        }
+
+        private void checkBox4_CheckedChanged(object sender, EventArgs e)
+        {
+            showBuggiesOnMap();
+        }
+
+        private void checkBox5_CheckedChanged(object sender, EventArgs e)
+        {
+            showBuggiesOnMap();
+        }
+
+
+        bool zoomDragging = false, movingZoom = false;
+        Vector2 zDragStart = new Vector2();
+        Vector2 zDragEnd = new Vector2() { X = 1, Y = 1 };
+        float zoomTop = 0f, zoomLeft = 0f, zoomRight = 1f, zoomBottom = 1f;
+
+
+        private void pictureBox2_MouseWheel(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            // Update the drawing based upon the mouse wheel scrolling.
+
+            float z = (float)(e.Delta * SystemInformation.MouseWheelScrollLines / 120);
+            float scaleBy;
+            if (z > 0) scaleBy = (5f / 6f) / 2f;
+            else scaleBy = 0.6f;
+
+            float axis = (zoomRight - zoomLeft) * scaleBy;
+            if (axis > 0.5f) axis = 0.5f;
+            if (axis < 0.025f) axis = 0.025f;
+            float center = (zoomRight + zoomLeft) / 2f;
+            if (center - axis < 0f) center = axis;
+            if (center + axis > 1f) center = 1f - axis;
+            zoomLeft = center - axis;
+            zoomRight = center + axis;
+
+            center = (zoomTop + zoomBottom) / 2f;
+            if (center - axis < 0f) center = axis;
+            if (center + axis > 1f) center = 1f - axis;
+            zoomTop = center - axis;
+            zoomBottom = center + axis;
+
+            scaleChanged();
+        }
+        private void pictureBox2_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                movingZoom = true;
+                zoomDragging = false;
+                return;
+            }
+
+            zoomDragging = true;
+            zDragStart.X = e.X / 255f;
+            zDragStart.Y = e.Y / 255f;
+        }
+
+
+
+        private void pictureBox2_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (movingZoom && e.Button == MouseButtons.Left)
+            {
+                moveZoomRectangle((e.X / 255f), (e.Y / 255f));
+                scaleChanged();
+                return;
+            }
+
+            if (!zoomDragging) return;
+
+            zDragEnd.X = e.X / 255f;
+            zDragEnd.Y = e.Y / 255f;
+            setZoomRectangle();
+
+            using (Graphics g = Graphics.FromImage(minimap))
+            {
+                g.Clear(Color.Black);
+                g.DrawImage(Resources.rro_map, 0, 0, 255, 255); //fixme: work out all the scaling crap for these. need to find the rectangle that is the corners of the map that fits in the window at the current zoom and offset.
+                g.DrawRectangle(trackPen, zoomLeft * 255f, zoomTop * 255f, (zoomRight - zoomLeft) * 255f, (zoomBottom - zoomTop) * 255f);
+            }
+            pictureBox2.Image = minimap;
+            pictureBox2.Refresh();
+        }
+
+        private void checkBoxAddTrees_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxAddTrees.Checked) checkBoxRemoveTrees.Checked = false;
+        }
+
+        private void checkBoxRemoveTrees_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxRemoveTrees.Checked) checkBoxAddTrees.Checked = false;
+        }
+
+        private void trackBar1_Scroll(object sender, EventArgs e)
+        {
+            label8.Text = "Radius" + trackBar1.Value.ToString() + "m";
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("This might take a minute...","Possible Long Operation");
+            clearTreesFromTracks();
+            showBuggiesOnMap();
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            //add all the trees back in...
+            for (int i = 0;i<treeExists.Length;i++) treeExists[i] = true;
+            showBuggiesOnMap();
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            button1_Click(sender, e);
+        }
+
+        void setZoomRectangle()
+        {
+            //we want to make sure it's a square so it fills the whole drawing area. 
+            //dragging starts at the center and outward through a radius
+            //Find the largest axis and increase the smallest axis to match it:
+            float axis = Math.Max(Math.Abs(zDragStart.X - zDragEnd.X), Math.Abs(zDragStart.Y - zDragEnd.Y));
+            if (axis < 0.025f) axis = 0.025f; //limit zoom level 
+            if (axis > 0.5f) axis = 0.5f;
+
+            //rebuild the center and keep it in bounds
+            float center = zDragStart.X;
+            if (center - axis < 0f) center = axis;
+            if (center + axis > 1f) center = 1f - axis;
+            zoomRight = center + axis;
+            zoomLeft = center - axis;
+
+            center = zDragStart.Y;
+            if (center - axis < 0f) center = axis;
+            if (center + axis > 1f) center = 1f - axis;
+            zoomBottom = center + axis;
+            zoomTop = center - axis;
+
+        }
+
+
+        void moveZoomRectangle(float x, float y)
+        {
+            //keep the same scale but move the zoom area:
+            float axis = (zoomRight - zoomLeft) / 2f;
+
+            //rebuild the center and keep it in bounds
+            float center = x;
+            if (center - axis < 0f) center = axis;
+            if (center + axis > 1f) center = 1f - axis;
+            zoomRight = center + axis;
+            zoomLeft = center - axis;
+
+            center = y;
+            if (center - axis < 0f) center = axis;
+            if (center + axis > 1f) center = 1f - axis;
+            zoomBottom = center + axis;
+            zoomTop = center - axis;
+
+        }
+        private void pictureBox2_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (movingZoom && e.Button == MouseButtons.Left)
+            {
+                moveZoomRectangle((e.X / 255f), (e.Y / 255f));
+                scaleChanged();
+                movingZoom = false;
+                zoomDragging = false;
+                return;
+            }
+
+            if (!zoomDragging) return;
+
+            zoomDragging = false;
+            zDragEnd.X = (float)e.X / 255f;
+            //if (zDragEnd.X < 0f) zDragEnd.X = 0f;
+            zDragEnd.Y = (float)e.Y / 255f;
+            //if (zDragEnd.Y < 0f) zDragEnd.Y = 0f;
+            setZoomRectangle();
+            scaleChanged();
+
+        }
+
+
 
         byte[][] SanderAmountArray2;
 
@@ -1066,6 +953,16 @@ namespace BuggyExchange
             CompressorValveValueHeader = convertHeader("1A 00 00 00 43 6F 6D 70 72 65 73 73 6F 72 56 61 6C 76 65 56 61 6C 75 65 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 A0 00 00 00 00 00 00 00 0E 00 00 00 46 6C 6F 61 74 50 72 6F 70 65 72 74 79 00 00");
             ReverserValueHeader = convertHeader("13 00 00 00 52 65 76 65 72 73 65 72 56 61 6C 75 65 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 A0 00 00 00 00 00 00 00 0E 00 00 00 46 6C 6F 61 74 50 72 6F 70 65 72 74 79 00 00");
             SanderAmountHeader = convertHeader("12 00 00 00 53 61 6E 64 65 72 41 6D 6F 75 6E 74 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 A0 00 00 00 00 00 00 00 0E 00 00 00 46 6C 6F 61 74 50 72 6F 70 65 72 74 79 00 00");
+
+            SplineTypeTrackHeader = convertHeader("15 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 54 79 70 65 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 D9 01 00 00 00 00 00 00 0C 00 00 00 53 74 72 50 72 6F 70 65 72 74 79 00 00");
+            SplineTrackLocationHeader = convertHeader("19 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 4C 6F 63 61 74 69 6F 6E 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 54 01 00 00 00 00 00 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 19 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 4C 6F 63 61 74 69 6F 6E 41 72 72 61 79 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 FC 00 00 00 00 00 00 00 07 00 00 00 56 65 63 74 6F 72 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackRotationHeader = convertHeader("19 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 52 6F 74 61 74 69 6F 6E 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 55 01 00 00 00 00 00 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 19 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 52 6F 74 61 74 69 6F 6E 41 72 72 61 79 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 FC 00 00 00 00 00 00 00 08 00 00 00 52 6F 74 61 74 6F 72 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackStartPointHeader = convertHeader("1B 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 53 74 61 72 74 50 6F 69 6E 74 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 56 01 00 00 00 00 00 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 1B 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 53 74 61 72 74 50 6F 69 6E 74 41 72 72 61 79 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 FC 00 00 00 00 00 00 00 07 00 00 00 56 65 63 74 6F 72 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackEndPointHeader = convertHeader("19 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 45 6E 64 50 6F 69 6E 74 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 54 01 00 00 00 00 00 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 19 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 45 6E 64 50 6F 69 6E 74 41 72 72 61 79 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 FC 00 00 00 00 00 00 00 07 00 00 00 56 65 63 74 6F 72 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackStartTangentHeader = convertHeader("1D 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 53 74 61 72 74 54 61 6E 67 65 6E 74 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 58 01 00 00 00 00 00 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 1D 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 53 74 61 72 74 54 61 6E 67 65 6E 74 41 72 72 61 79 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 FC 00 00 00 00 00 00 00 07 00 00 00 56 65 63 74 6F 72 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackEndTangentHeader = convertHeader("1B 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 45 6E 64 54 61 6E 67 65 6E 74 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 56 01 00 00 00 00 00 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 1B 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 45 6E 64 54 61 6E 67 65 6E 74 41 72 72 61 79 00 0F 00 00 00 53 74 72 75 63 74 50 72 6F 70 65 72 74 79 00 FC 00 00 00 00 00 00 00 07 00 00 00 56 65 63 74 6F 72 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackSwitchStateHeader = convertHeader("1C 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 53 77 69 74 63 68 53 74 61 74 65 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 58 00 00 00 00 00 00 00 0C 00 00 00 49 6E 74 50 72 6F 70 65 72 74 79 00 00 15 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+            SplineTrackPaintStyleHeader = convertHeader("1B 00 00 00 53 70 6C 69 6E 65 54 72 61 63 6B 50 61 69 6E 74 53 74 79 6C 65 41 72 72 61 79 00 0E 00 00 00 41 72 72 61 79 50 72 6F 70 65 72 74 79 00 58 00 00 00 00 00 00 00 0C 00 00 00 49 6E 74 50 72 6F 70 65 72 74 79 00 00");
         }
 
 
@@ -1094,16 +991,16 @@ namespace BuggyExchange
                 arrTemp[i] = new byte[4];
                 for (int j = 0; j < 4; j++)
                     arrTemp[i][j] = buff[pos + j];
-                if (debug) Debug.WriteLine("Checking @ " + pos.ToString() + " = " + BitConverter.ToSingle(arrTemp[i]));
+                //if (debug) Debug.WriteLine("Checking @ " + pos.ToString() + " = " + BitConverter.ToSingle(arrTemp[i]));
                 pos += 4;
             }
             return arrTemp;
         }
 
 
-        byte[][] getVectorArray(byte[] header, int offset) 
+        byte[][] getVectorArray(byte[] header, int offset)
         {
-            int ign = header.Length +4;//just set ign to greater than the length... we're not searching for the entire header this time
+            int ign = header.Length + 4;//just set ign to greater than the length... we're not searching for the entire header this time
             byte[][] arrTemp = new byte[numSourceCars][];
             //find location of trigger text in file, jump ahead by offset, gather each int
             int found = findBytesInBytes(header, ign);
@@ -1147,7 +1044,7 @@ namespace BuggyExchange
             for (int i = 0; i < numSourceCars; i++)
             { //for each car, check to see if there is a name or not
                 arrTemp[i] = buff[pos];
-                if (debug) Debug.WriteLine("Checking @ " + pos.ToString() + " = " + (arrTemp[i] == 1).ToString());
+                //if (debug) Debug.WriteLine("Checking @ " + pos.ToString() + " = " + (arrTemp[i] == 1).ToString());
                 pos++;
             }
             return arrTemp;
