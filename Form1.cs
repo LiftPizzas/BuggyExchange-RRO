@@ -1,6 +1,7 @@
 using BuggyExchange.Properties;
 using Microsoft.VisualBasic.Devices;
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using System.Numerics;
 using System.Reflection;
 using System.Text;
@@ -82,7 +83,45 @@ namespace BuggyExchange
             map = new Bitmap(pictureBox1.Width, pictureBox1.Height);
             minimap = new Bitmap(pictureBox2.Width, pictureBox2.Height);
 
+            //init gradecolors
+            int pSize = 7;
+            gradeColor = new Pen[21];
+            gradeColor[0] = new Pen( Color.FromArgb(255, 255, 255),pSize); //0% grade WHITE
+            gradeColor[1] = new Pen( Color.FromArgb(128, 128, 128),pSize);
+            gradeColor[2] = new Pen( Color.FromArgb(0, 255, 0),pSize); //1% GREEN
+            gradeColor[3] = new Pen( Color.FromArgb(128, 255, 128),pSize);
+            gradeColor[4] = new Pen( Color.FromArgb(255, 255, 0),pSize); //2% YELLOW
+            gradeColor[5] = new Pen( Color.FromArgb(255, 255,128),pSize);
+            gradeColor[6] = new Pen( Color.FromArgb(255, 0, 0),pSize); //3% RED
+            gradeColor[7] = new Pen( Color.FromArgb(255, 128, 128),pSize);
+            gradeColor[8] = new Pen( Color.FromArgb(0, 0, 255),pSize); //4% BLUE
+            gradeColor[9] = new Pen( Color.FromArgb(128, 128, 255),pSize);
+            gradeColor[10] = new Pen( Color.FromArgb(0, 255, 0),pSize); //1% GREEN
+            gradeColor[11] = new Pen( Color.FromArgb(128, 255, 128),pSize);
+            gradeColor[12] = new Pen( Color.FromArgb(255, 255, 0),pSize); //2% YELLOW
+            gradeColor[13] = new Pen( Color.FromArgb(255, 255, 128),pSize);
+            gradeColor[14] = new Pen( Color.FromArgb(255, 0, 0),pSize); //3% RED
+            gradeColor[15] = new Pen( Color.FromArgb(255, 128, 128),pSize);
+            gradeColor[16] = new Pen( Color.FromArgb(0, 0, 255),pSize); //4% BLUE
+            gradeColor[17] = new Pen( Color.FromArgb(128, 128, 255),pSize);
+            gradeColor[18] = new Pen( Color.FromArgb(255, 0, 255),pSize); //9% PURPLE
+            gradeColor[19] = new Pen( Color.FromArgb(255, 128, 255),pSize);
+            gradeColor[20] = new Pen( Color.FromArgb(0, 0, 0),pSize); //10% or above BLACK
 
+            //init track type pens
+            pSize = 3;
+            tracktypePen = new Pen[11];
+            tracktypePen[0] = new Pen(Color.FromArgb(255, 255, 255), pSize); // WHITE
+            tracktypePen[1] = new Pen(Color.FromArgb(139, 69, 19), pSize); //brown
+            tracktypePen[2] = new Pen(Color.FromArgb(192, 192, 192), pSize); // plain rails
+            tracktypePen[3] = new Pen(Color.FromArgb(192, 192, 192), pSize); 
+            tracktypePen[4] = new Pen(Color.FromArgb(192, 192, 192), pSize); 
+            tracktypePen[5] = new Pen(Color.FromArgb(192, 192, 192), pSize); 
+            tracktypePen[6] = new Pen(Color.FromArgb(255, 0,0), pSize); //Bumper
+            tracktypePen[7] = new Pen(Color.FromArgb(210, 180, 140), pSize); //wood trestle
+            tracktypePen[8] = new Pen(Color.FromArgb(128,0,0), pSize); //Fancy wood trestle with walkway
+            tracktypePen[9] = new Pen(Color.FromArgb(128, 128, 192), pSize); //steel trestle
+            tracktypePen[10] = new Pen(Color.FromArgb(192, 192, 64), pSize); //Stone Wall
 
             getAllTreesFromFile();
 
@@ -274,6 +313,13 @@ namespace BuggyExchange
                 return;
             }
 
+            if (checkBox6.Checked)
+            {
+                splineDragging = true;
+                //FIXME: add code here
+                return;
+            }
+
             dragging = 0;
             if (e.Button == MouseButtons.Right)
             {
@@ -320,11 +366,53 @@ namespace BuggyExchange
         {
             //if dragging, make sure everything inside the rectangle is checked before disabling the drag flag
             treeDragging = false;
+            splineDragging = false;
             dragging = 0;
+        }
+
+        bool splineDragging = false;
+        int activeSpline = -1;
+        int activeSplineType = -1;
+        //0 = start point
+        //1 = start tangent
+        //2 = end tangent
+        //3 = end point
+        //Vector3[] splineDivisions = new Vector3[1000];
+
+
+        //put the active spline's info in the labels
+        private void showSplineStats()
+        {
+            if (activeSpline < 0)
+            {
+                labelSplineIndex.Text = "None Selected";
+                labelTrackType.Text = "None Selected";
+                labelTrackGrade.Text = "None Selected";
+                label9.Text = "None Selected";
+                label11.Text = "None Selected";
+                label12.Text = "None Selected";
+                label13.Text = "None Selected";
+                return;
+            }
+
+            labelSplineIndex.Text = "Index " + activeSpline.ToString();
+            labelTrackType.Text = TrackSegmentNames[activeSpline];
+            labelTrackGrade.Text = trackGrade[activeSpline].ToString("0.00");
+            label9.Text =trackStart[activeSpline].ToString("0.00");
+            label11.Text = tangentStart[activeSpline].ToString("0.00");
+            label12.Text = tangentEnd[activeSpline].ToString("0.00");
+            label13.Text = trackEnd[activeSpline].ToString("0.00");
+
         }
 
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
+            lastMouseX = e.X;
+            lastMouseY = e.Y;
+            float dist;
+            float nearest;
+
+
             if (treeDragging)
             {
                 if (checkBoxAddTrees.Checked || checkBoxRemoveTrees.Checked)
@@ -334,29 +422,61 @@ namespace BuggyExchange
                 }
             }
 
-            //if (checkedListBox1.Items.Count == 0) return;
-            //if (numSourceCars == 0) return;
-            lastMouseX = e.X;
-            lastMouseY = e.Y;
-            //this.Text = lastMouseX + " " + lastMouseY;
-            //checkedListBox1.Items.Clear();
-            float dist;
-            float nearest = 999999f;
-            for (int i = 0; i < numSourceCars; i++)
+
+            if (splineDragging)
             {
-                float dx = lastMouseX - buggyDrawX[i];
-                float dy = lastMouseY - buggyDrawY[i];
-                dist = dx * dx + dy * dy;
 
+            }
 
-                //checkedListBox1.Items.Add(frameTypes[i] + " = " + dist.ToString() ,CheckState.Unchecked );  
-
-                if (dist < nearest)
+            //if we're in spline editing mode but not dragging, 
+            if (checkBox6.Checked)
+            {   //find nearest spline so we can highlight or do things to it
+                nearest = 999999f;
+                for (int i = 0; i < trackDrawStart.Length; i++)
                 {
-                    nearest = dist;
-                    nearestBuggy = i;
+                    float dx = lastMouseX - trackDrawStart[i].X;
+                    float dy = lastMouseY - trackDrawStart[i].Y;
+                    dist = dx * dx + dy * dy;
+
+                    if (dist < nearest)
+                    {
+                        nearest = dist;
+                        activeSpline = i;
+                    }
+                    dx = lastMouseX - trackDrawEnd[i].X;
+                    dy = lastMouseY - trackDrawEnd[i].Y;
+                    dist = dx * dx + dy * dy;
+
+                    if (dist < nearest)
+                    {
+                        nearest = dist;
+                        activeSpline = i;
+                    }
+                }
+                showSplineStats();
+
+            }
+            else
+            {
+                //this.Text = lastMouseX + " " + lastMouseY;
+                //checkedListBox1.Items.Clear();
+
+                nearest = 999999f;
+                for (int i = 0; i < numSourceCars; i++)
+                {
+                    float dx = lastMouseX - buggyDrawX[i];
+                    float dy = lastMouseY - buggyDrawY[i];
+                    dist = dx * dx + dy * dy;
+                    //checkedListBox1.Items.Add(frameTypes[i] + " = " + dist.ToString() ,CheckState.Unchecked );  
+
+                    if (dist < nearest)
+                    {
+                        nearest = dist;
+                        nearestBuggy = i;
+                    }
                 }
             }
+
 
             if (dragging == 3 || dragging == 4)
             {
@@ -409,11 +529,11 @@ namespace BuggyExchange
 
         private void pictureBox1_Paint(object sender, PaintEventArgs e) { }
 
-
+        float mapMax = 200000f, mapMax2 = 400000f;
         //call this whenever scale needs to be recalculated.
         void scaleChanged()
         {
-            float mapMax = 200000f, mapMax2 = 400000f;
+
             //using the zoom rectangle dragged out in picture2, determine our scale and offsets
             totalZoom = 850f / (zoomRight - zoomLeft);
 
@@ -464,6 +584,7 @@ namespace BuggyExchange
         Pen trackPen = new Pen(Color.Beige, 2f);
         Pen handlePen = new Pen(Color.Red, 2f);
         Pen handlePen2 = new Pen(Color.Blue, 2f);
+        Pen handlePenGreen = new Pen(Color.Green, 2f);
         Pen handlePen3 = new Pen(Color.White, 3f);
         Brush bRed = new SolidBrush(Color.Red);
         Brush bDarkRed = new SolidBrush(Color.DarkRed);
@@ -471,6 +592,7 @@ namespace BuggyExchange
         Brush bYellow = new SolidBrush(Color.Yellow);
         Brush bBlack = new SolidBrush(Color.Black);
         Brush bTrees = new SolidBrush(Color.Green);
+        bool flashOn = false;
         private void showBuggiesOnMap()
         {
             using (Graphics g = Graphics.FromImage(minimap))
@@ -491,14 +613,79 @@ namespace BuggyExchange
                 g.Clear(Color.Black);
                 g.DrawImage(Resources.reliefmap, new Rectangle(0, 0, 850, 850), new Rectangle((int)(zoomLeft * 4000f), (int)(zoomTop * 4000f), (int)((zoomRight - zoomLeft) * 4000f), (int)((zoomBottom - zoomTop) * 4000f)), GraphicsUnit.Pixel);
 
-                //draw track segments
-                if (checkBox3.Checked)
+                //testing to see if our algorithm lines up with the built-in one
+                //for (int t = 0; t < numTracks; t++)
+                //{
+                //    Vector2 prevPoint = trackDrawStart[t];
+                //    Vector2 aLen = tangentDrawStart[t] - trackDrawStart[t];
+                //    Vector2 bLen = tangentDrawEnd[t] - tangentDrawStart[t];
+                //    Vector2 cLen = trackDrawEnd[t] - tangentDrawEnd[t];
+                //    for (float s = 0.01f; s <= 1.0f; s += 0.01f)
+                //    {
+                //        //get the spline point at this distance along
+                //        Vector2 a = trackDrawStart[t] + (aLen * s);
+                //        Vector2 b = tangentDrawStart[t] + (bLen * s);
+                //        Vector2 c = tangentDrawEnd[t] + (cLen * s);
+
+                //        Vector2 dLen = b - a;
+                //        Vector2 d = a + (dLen * s);
+                //        Vector2 eLen = c - b;
+                //        Vector2 e = b + (eLen * s);
+
+                //        Vector2 fLen = e - d;
+                //        Vector2 f = d + (fLen * s); //final spline position
+
+                //        g.DrawLine(new Pen(bRed,5.0f), f.X,f.Y, prevPoint.X,prevPoint.Y);
+                //        prevPoint = f;
+
+                //    }
+                //}
+
+                if (checkBox7.Checked)
                 {
                     for (int i = 0; i < numTracks; i++)
                     {
-                        g.FillRectangle(bBlack, trackDrawStart[i].X, trackDrawStart[i].Y, 5f, 5f);
-                        g.DrawBezier(handlePen3, trackDrawStart[i].X, trackDrawStart[i].Y, tangentDrawStart[i].X, tangentDrawStart[i].Y, tangentDrawEnd[i].X, tangentDrawEnd[i].Y, trackDrawEnd[i].X, trackDrawEnd[i].Y);
+                        g.DrawBezier(gradeColor[trackColor[i]], trackDrawStart[i].X, trackDrawStart[i].Y, tangentDrawStart[i].X, tangentDrawStart[i].Y, tangentDrawEnd[i].X, tangentDrawEnd[i].Y, trackDrawEnd[i].X, trackDrawEnd[i].Y);
                     }
+                }
+
+                //draw track segments
+                if (checkBox3.Checked)
+                {
+                    if (checkBox8.Checked)
+                    { //show in type colors
+                        for (int i = 0; i < numTracks; i++)
+                        {
+                            g.FillRectangle(bBlack, trackDrawStart[i].X, trackDrawStart[i].Y, 5f, 5f);
+                            g.DrawBezier(tracktypePen[trackTypeColor[i]], trackDrawStart[i].X, trackDrawStart[i].Y, tangentDrawStart[i].X, tangentDrawStart[i].Y, tangentDrawEnd[i].X, tangentDrawEnd[i].Y, trackDrawEnd[i].X, trackDrawEnd[i].Y);
+                        }
+                    }
+                    else
+                    { //just draw all tracks in white
+                        for (int i = 0; i < numTracks; i++)
+                        {
+                            g.FillRectangle(bBlack, trackDrawStart[i].X, trackDrawStart[i].Y, 5f, 5f);
+                            g.DrawBezier(handlePen3, trackDrawStart[i].X, trackDrawStart[i].Y, tangentDrawStart[i].X, tangentDrawStart[i].Y, tangentDrawEnd[i].X, tangentDrawEnd[i].Y, trackDrawEnd[i].X, trackDrawEnd[i].Y);
+                        }
+                    }
+                    
+                    //draw the selected segment (if any) in a highlighted or flashing color
+                    if (activeSpline > -1)
+                    {
+                        g.FillRectangle(bRed, trackDrawStart[activeSpline].X, trackDrawStart[activeSpline].Y, 5f, 5f);
+                        g.DrawBezier(handlePenGreen, trackDrawStart[activeSpline].X, trackDrawStart[activeSpline].Y, tangentDrawStart[activeSpline].X, tangentDrawStart[activeSpline].Y, tangentDrawEnd[activeSpline].X, tangentDrawEnd[activeSpline].Y, trackDrawEnd[activeSpline].X, trackDrawEnd[activeSpline].Y);
+
+                        //draw the four points (start end and two tangents)
+                        //start to tangent 1
+                        g.DrawLine(handlePen, trackDrawStart[activeSpline].X, trackDrawStart[activeSpline].Y, tangentDrawStart[activeSpline].X, tangentDrawStart[activeSpline].Y);
+                        //end to tangent 2
+                        g.DrawLine(handlePen, tangentDrawEnd[activeSpline].X, tangentDrawEnd[activeSpline].Y, trackDrawEnd[activeSpline].X, trackDrawEnd[activeSpline].Y);
+                        if (activeSplineType == 1) g.FillRectangle(bYellow, trackDrawStart[activeSpline].X, trackDrawStart[activeSpline].Y, 6f, 6f);
+                        else if (activeSplineType == 2) g.FillRectangle(bYellow, tangentDrawStart[activeSpline].X, tangentDrawStart[activeSpline].Y, 6f, 6f);
+                        else if (activeSplineType == 3) g.FillRectangle(bYellow, tangentDrawEnd[activeSpline].X, tangentDrawEnd[activeSpline].Y, 6f, 6f);
+                        else if (activeSplineType == 4) g.FillRectangle(bYellow, trackDrawEnd[activeSpline].X, trackDrawEnd[activeSpline].Y, 6f, 6f);
+                    }
+
                 }
 
                 //draw Target File's cars on the map
@@ -666,6 +853,62 @@ namespace BuggyExchange
                     checkedListBox1.SetItemChecked(i, false);
             }
 
+            if (e.KeyCode == Keys.D1) { activeSplineType = 1; showBuggiesOnMap(); }
+            if (e.KeyCode == Keys.D2) { activeSplineType = 2; showBuggiesOnMap(); }
+            if (e.KeyCode == Keys.D3) { activeSplineType = 3; showBuggiesOnMap(); }
+            if (e.KeyCode == Keys.D4) { activeSplineType = 4; showBuggiesOnMap(); }
+
+            if (e.KeyCode == Keys.OemCloseBrackets)
+            {
+                activeSpline += 1;
+                if (activeSpline >= tangentDrawStart.Length) activeSpline = 0;
+                showSplineStats();
+                showBuggiesOnMap();
+            }
+            if (e.KeyCode == Keys.OemOpenBrackets)
+            {
+                activeSpline -= 1;
+                if (activeSpline < 0) activeSpline = tangentDrawStart.Length - 1;
+                showSplineStats();
+                showBuggiesOnMap();
+            }
+
+            if (e.KeyCode == Keys.Enter) //re-zoom to the active spline segment
+            {
+                setNewZoom();
+                showBuggiesOnMap();
+            }
+
+            if (e.KeyCode == Keys.Up && activeSpline > -1)
+            {
+                float tLen = 100f;
+                if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift) tLen = 10f;
+                if ((Control.ModifierKeys & Keys.Control) == Keys.Control) tLen = 1f;
+                adjustActiveSplinePoint(0f, tLen, 0f);
+            }
+            if (e.KeyCode == Keys.Down && activeSpline > -1)
+            {
+                float tLen = -100f;
+                if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift) tLen = -10f;
+                if ((Control.ModifierKeys & Keys.Control) == Keys.Control) tLen = -1f;
+                adjustActiveSplinePoint(0f,tLen, 0f);
+            }
+            if (e.KeyCode == Keys.Left && activeSpline > -1)
+            {
+                float tLen = 100f;
+                if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift) tLen = 10f;
+                if ((Control.ModifierKeys & Keys.Control) == Keys.Control) tLen = 1f;
+                adjustActiveSplinePoint(tLen, 0f, 0f);
+            }
+
+            if (e.KeyCode == Keys.Right && activeSpline > -1)
+            {
+                float tLen = -100f;
+                if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift) tLen = -10f;
+                if ((Control.ModifierKeys & Keys.Control) == Keys.Control) tLen = -1f;
+                adjustActiveSplinePoint(tLen, 0f, 0f);
+            }
+
             ////backspace re-zooms, and we might as well recenter so it actually fits
             //if (e.KeyCode == Keys.Back)
             //{
@@ -711,6 +954,86 @@ namespace BuggyExchange
 
         }
 
+        private void adjustActiveSplinePoint(float x, float y, float z)
+        {
+            if (activeSplineType == 1)
+            {
+                trackStart[activeSpline].X += x;
+                trackStart[activeSpline].Y += y;
+                trackStart[activeSpline].Z += z;
+            }
+            else if (activeSplineType == 2)
+            {
+                tangentStart[activeSpline].X += x;
+                tangentStart[activeSpline].Y += y;
+                tangentStart[activeSpline].Z += z;
+            }
+            else if (activeSplineType == 3)
+            {
+                tangentEnd[activeSpline].X += x;
+                tangentEnd[activeSpline].Y += y;
+                tangentEnd[activeSpline].Z += z;
+            }
+            else if (activeSplineType == 4)
+            {
+                trackEnd[activeSpline].X += x;
+                trackEnd[activeSpline].Y += y;
+                trackEnd[activeSpline].Z += z;
+            }
+            scaleChanged();
+        }
+
+
+        //given x and y coords, find the left/right/top/bottom and apply them to the zoom
+        private void setNewZoom()
+        {
+            //zoom values are from 0.0 to 1.0
+            //given the active spline segment, find the outer extremes out of the four positions:
+            float left = trackStart[activeSpline].X;
+            if (trackEnd[activeSpline].X < left) left = trackEnd[activeSpline].X;
+            if (tangentStart[activeSpline].X < left) left = tangentStart[activeSpline].X;
+            if (tangentEnd[activeSpline].X < left) left = tangentEnd[activeSpline].X;
+            //left /= 850f;
+            zDragStart.X = ((-left + mapMax) / mapMax2);
+
+            float right = trackStart[activeSpline].X;
+            if (trackEnd[activeSpline].X > right) right = trackEnd[activeSpline].X;
+            if (tangentStart[activeSpline].X > right) right = tangentStart[activeSpline].X;
+            if (tangentEnd[activeSpline].X > right) right = tangentEnd[activeSpline].X;
+            //right /= 850f;
+            zDragEnd.X = ((-right + mapMax) / mapMax2);
+
+            float top = trackStart[activeSpline].Y;
+            if (trackEnd[activeSpline].Y < top) top = trackEnd[activeSpline].Y;
+            if (tangentStart[activeSpline].Y < top) top = tangentStart[activeSpline].Y;
+            if (tangentEnd[activeSpline].Y < top) top = tangentEnd[activeSpline].Y;
+            //top /= 850f;
+            zDragStart.Y = ((-top + mapMax) / mapMax2);
+
+            float bottom = trackStart[activeSpline].Y;
+            if (trackEnd[activeSpline].Y > bottom) bottom = trackEnd[activeSpline].Y;
+            if (tangentStart[activeSpline].Y > bottom) bottom = tangentStart[activeSpline].Y;
+            if (tangentEnd[activeSpline].Y > bottom) bottom = tangentEnd[activeSpline].Y;
+            //bottom /= 850f;
+            zDragEnd.Y = ((-bottom + mapMax) / mapMax2);
+
+            //((-framePositionsX[c] + mapMax) / mapMax2)
+
+            zDragStart.X = (zDragStart.X + zDragEnd.X) / 2f; //the starting point is at the center, not at the edge.
+            zDragStart.Y = (zDragStart.Y + zDragEnd.Y) / 2f;
+
+            setZoomRectangle();
+            scaleChanged();
+
+            ////make this fit comfortably within a zoom region, so the outer edges are actually outside this box
+            //zoomLeft = left - ((right - left) / 3f);
+            //zoomRight = right + ((right - left) / 3f);
+            //zoomTop = top - ((bottom - top) / 3f);
+            //zoomBottom = bottom + ((bottom - top) / 3f);
+            //scaleChanged(); //apply this and draw
+        }
+
+
         private void panel2_Paint(object sender, PaintEventArgs e)
         {
 
@@ -746,6 +1069,8 @@ namespace BuggyExchange
             float scaleBy;
             if (z > 0) scaleBy = (5f / 6f) / 2f;
             else scaleBy = 0.6f;
+
+            //float offX = e.X
 
             float axis = (zoomRight - zoomLeft) * scaleBy;
             if (axis > 0.5f) axis = 0.5f;
@@ -807,12 +1132,19 @@ namespace BuggyExchange
 
         private void checkBoxAddTrees_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkBoxAddTrees.Checked) checkBoxRemoveTrees.Checked = false;
+            if (checkBoxAddTrees.Checked)
+            {
+                checkBoxRemoveTrees.Checked = false;
+                checkBox6.Checked = false;
+            }
         }
-
         private void checkBoxRemoveTrees_CheckedChanged(object sender, EventArgs e)
         {
-            if (checkBoxRemoveTrees.Checked) checkBoxAddTrees.Checked = false;
+            if (checkBoxRemoveTrees.Checked)
+            {
+                checkBoxAddTrees.Checked = false;
+                checkBox6.Checked = false;
+            }
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
@@ -822,7 +1154,7 @@ namespace BuggyExchange
 
         private void button8_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("This might take a minute...","Possible Long Operation");
+            MessageBox.Show("This might take a minute...", "Possible Long Operation");
             clearTreesFromTracks();
             showBuggiesOnMap();
         }
@@ -830,8 +1162,35 @@ namespace BuggyExchange
         private void button7_Click(object sender, EventArgs e)
         {
             //add all the trees back in...
-            for (int i = 0;i<treeExists.Length;i++) treeExists[i] = true;
+            for (int i = 0; i < treeExists.Length; i++) treeExists[i] = true;
             showBuggiesOnMap();
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            //add all the trees back in...
+            for (int i = 0; i < treeExists.Length; i++) treeExists[i] = false;
+            showBuggiesOnMap();
+        }
+
+        private void checkBox6_CheckedChanged(object sender, EventArgs e)
+        {
+            splineDragging = false;
+            checkBoxAddTrack.Checked = false;
+            checkBoxRemoveTrack.Checked = false;
+            panelTracks.Visible = !panelTracks.Visible; //when this is visible we are in track editing mode
+            if (checkBox6.Checked)
+            {
+                checkBoxAddTrees.Checked = false;
+                checkBoxRemoveTrees.Checked = false;
+            }
+            activeSpline = -1;
+            activeSplineType = -1;
         }
 
         private void button5_Click(object sender, EventArgs e)
@@ -907,8 +1266,6 @@ namespace BuggyExchange
         }
 
 
-
-        byte[][] SanderAmountArray2;
 
         private void button3_Click(object sender, EventArgs e)
         {
@@ -1139,7 +1496,7 @@ namespace BuggyExchange
             int pos = found + offset;
             for (int i = 0; i < numSourceCars; i++)
             { //for each car, check to see if there is a name or not
-                //Debug.WriteLine("Checking @ " + pos.ToString());
+              //Debug.WriteLine("Checking @ " + pos.ToString());
                 int strlen = Convert.ToInt32(buff[pos]);
                 if (strlen == 0)
                 {

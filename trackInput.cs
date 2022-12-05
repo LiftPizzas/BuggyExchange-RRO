@@ -39,6 +39,11 @@ namespace BuggyExchange
         Vector3[] trackStart, trackEnd, tangentStart, tangentEnd, trackDrawLocation;
         Vector2[] tangentDrawStart, tangentDrawEnd;
         Vector3[] trackRotation, trackLocation;
+        float[] trackGrade;
+        int[] trackColor;
+        int[] trackTypeColor;
+        Pen[] gradeColor, tracktypePen;
+        Vector2[] trackManualTest;
 
         byte[][] SplineTrackTypeArray;
         byte[][] SplineTrackLocationArray;
@@ -103,6 +108,10 @@ namespace BuggyExchange
             trackLocation = new Vector3[numTracks]; //the unscaled xyz values
             trackDrawLocation = new Vector3[numTracks]; //the scaled xy values of the segment's center, for drawing on the map
             trackRotation = new Vector3[numTracks];
+            trackGrade = new float[numTracks]; //stores the highest grade found within this segment of track
+            trackColor = new int[numTracks]; //stores the drawing color for the track segments based on grade
+            trackTypeColor = new int[numTracks]; //stores the drawing color for the track segments based on grade
+            trackManualTest = new Vector2[numTracks * 100];
 
             trackDrawStart = new Vector2[numTracks];
             trackDrawEnd = new Vector2[numTracks];
@@ -114,7 +123,7 @@ namespace BuggyExchange
             tangentDrawStart = new Vector2[numTracks];
             tangentDrawEnd = new Vector2[numTracks];
 
-            
+
 
             // Track TYPES
             int i = 0;
@@ -131,7 +140,7 @@ namespace BuggyExchange
             //for now we won't be writing anything out so we don't need to store the binary data yet, only the strings
 
 
-           
+
             //byte[][] SplineTrackSwitchStateArray;
             //byte[][] SplineTrackPaintStyleArray;
 
@@ -156,7 +165,7 @@ namespace BuggyExchange
                 //Debug.WriteLine(trackLocation[j].ToString());
             }
 
-            
+
 
             //-------------------------------------------
             // Rotations
@@ -203,7 +212,7 @@ namespace BuggyExchange
             }
 
 
-          
+
             //-------------------------------------------
             // EndPoints
             found = findInBytes2("SplineTrackEndPointArray");
@@ -230,7 +239,7 @@ namespace BuggyExchange
 
             //-------------------------------------------
             // StartTangents
-            float tangentScale =  -0.33333f;
+            float tangentScale = -0.33333f;
 
             found = findInBytes2("SplineTrackStartTangentArray");
             if (found == -1)
@@ -254,8 +263,7 @@ namespace BuggyExchange
             for (int c = 0; c < numTracks; c++)
             {
                 //tangent lines are simple offsets from the start and end points, create an absolute not relative position so we can zoom/scale it
-                tangentStart[c].X = trackStart[c].X - (tangentStart[c].X * tangentScale);
-                tangentStart[c].Y = trackStart[c].Y - (tangentStart[c].Y * tangentScale);
+                tangentStart[c] = trackStart[c] - (tangentStart[c] * tangentScale);
             }
 
             //-------------------------------------------
@@ -283,10 +291,83 @@ namespace BuggyExchange
             for (int c = 0; c < numTracks; c++)
             {
                 //tangent lines are simple offsets from the start and end points
-                tangentEnd[c].X = trackEnd[c].X + (tangentEnd[c].X * tangentScale);
-                tangentEnd[c].Y = trackEnd[c].Y + (tangentEnd[c].Y * tangentScale);
+                tangentEnd[c] = trackEnd[c] + (tangentEnd[c] * tangentScale);
             }
 
+
+            //Find the highest absolute grade for each track segment so we can draw it.
+            //calculating the whole 3-d spline instead of just the Z axis,
+            //if it's needed elsewhere we can use this code for it and put it in a function
+            //also check track types and make them appropriate colors
+            string[] ttList = { "rail_914\0", "rail_914_h01\0", "rail_914_h05\0", "rail_914_h10\0", "rail_914_bumper\0", "rail_914_trestle_wood_01\0", "rail_914_trestle_pile_01\0", "rail_914_trestle_steel_01\0", "rail_914_wall_01\0" };
+
+            for (int t = 0; t < numTracks; t++)
+            {
+                float biggest = 0f;
+                Vector3 prevPoint = trackStart[t];
+
+                Vector3 aLen = tangentStart[t] - trackStart[t];
+                Vector3 bLen = tangentEnd[t] - tangentStart[t];
+                Vector3 cLen = trackEnd[t] - tangentEnd[t];
+
+                //float nujg;
+                //if (t == 283)
+                //    nujg = 0f;
+
+                for (float s = 0.01f; s <= 1.0f; s += 0.01f)
+                {
+                    //get the spline point at this distance along
+                    Vector3 a = trackStart[t] + (aLen * s);
+                    Vector3 b = tangentStart[t] + (bLen * s);
+                    Vector3 c = tangentEnd[t] + (cLen * s);
+
+                    Vector3 dLen = b - a;
+                    Vector3 d = a + (dLen * s);
+                    Vector3 eLen = c - b;
+                    Vector3 e = b + (eLen * s);
+
+                    Vector3 fLen = e - d;
+                    Vector3 f = d + (fLen * s);
+
+                    float dx = f.X - prevPoint.X;
+                    float dy = f.Y - prevPoint.Y;
+                    float run = (float)Math.Sqrt((dx * dx) + (dy * dy));
+                    float grade = Math.Abs((f.Z - prevPoint.Z) / run) * 100f; //slope at this position (rise over run)
+                    if (grade > biggest)
+                    {
+                        biggest = grade;
+                    }
+                    prevPoint = f;
+                }
+                //we've checked all points in the spline and have the largest grade.
+                //decide which color to make it.
+                trackGrade[t] = biggest; //this will always be zero or a positive number, never negative
+                int colorIndex = (int)(biggest * 2f); //make sure the index is within bounds for our color list array
+                if (colorIndex > 20) colorIndex = 20;
+                trackColor[t] = colorIndex;
+
+                //set the track type color for when it needs to be used for drawing:
+                //looks for "rail_914_switch" and lump all of these together. No need to separate them by color
+
+                trackTypeColor[t] = 0;//switches are all bundled as type 0, which is the default, so we don't need to search for them
+                if ((trackTypes[t].Substring(0, 7) == "ballast") || (trackTypes[t] == "rail_914_wall_01_norail\0"))
+                {
+                    trackTypeColor[t] = 1; //brown
+                }
+                else
+                {
+                    for (int r = 0; r < ttList.Length; r++)
+                    {
+                        if (trackTypes[t] == ttList[r])
+                        {
+                            trackTypeColor[t] = r+2;
+                            break;
+                        }
+                    }
+                }
+
+
+            }
 
             scaleChanged();
             showBuggiesOnMap();
@@ -297,7 +378,10 @@ namespace BuggyExchange
 
 
 
+        void getSplinePoint(int index, float x)
+        {
 
+        }
 
 
 

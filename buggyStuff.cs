@@ -4,9 +4,20 @@ using System.Linq;
 
 namespace BuggyExchange
 {
+    class nameLengths
+    {
+        public int name { get; set; }
+        public int number { get; set; }
+
+        public nameLengths(int name, int number)
+        {
+            this.name = name;
+            this.number = number;
+        }   
+    }
+
     public partial class Form1 : Form
     {
-
 
         void parseSaveNow(string file)
         {
@@ -32,6 +43,24 @@ namespace BuggyExchange
                 return;
             }
 
+            //name that shows up, max length of name, max length of number field
+            Dictionary<string, nameLengths> nameDict = new Dictionary<string, nameLengths>()
+            {
+                {"flatcar_logs", new nameLengths( 10, 4 )  },
+                {"flatcar_stakes",new nameLengths( 10, 4 )},
+                {"flatcar_cordwood", new nameLengths( 10, 4 )},
+                {"flatcar_hopper", new nameLengths( 10, 4 )},
+                {"flatcar_tanker", new nameLengths( 12, 4 )},
+                {"boxcar", new nameLengths( 15, 4 )}
+                //{"", 10, 4},
+                //{"", 10, 4},
+                //{"", 10, 4},
+                //{"", 10, 4},
+                //{"", 10, 4},
+                //{"", 10, 4}
+
+            };
+            //1234567890123456789012345678901234567890
             frameTypes = new string[numSourceCars];
             framePositionsX = new float[numSourceCars];
             framePositionsY = new float[numSourceCars];
@@ -605,6 +634,8 @@ namespace BuggyExchange
         byte[][] GeneratorValveValueArray2;
         byte[][] CompressorValveValueArray2;
         byte[][] ReverserValueArray2;
+        byte[][] SanderAmountArray2;
+
 
 
     }

@@ -50,6 +50,19 @@
             this.checkBoxRemoveTrees = new System.Windows.Forms.CheckBox();
             this.checkBoxAddTrees = new System.Windows.Forms.CheckBox();
             this.button5 = new System.Windows.Forms.Button();
+            this.button6 = new System.Windows.Forms.Button();
+            this.checkBox6 = new System.Windows.Forms.CheckBox();
+            this.labelTrackType = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.checkBoxRemoveTrack = new System.Windows.Forms.CheckBox();
+            this.checkBoxAddTrack = new System.Windows.Forms.CheckBox();
+            this.labelTrackGrade = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
+            this.label13 = new System.Windows.Forms.Label();
+            this.labelSplineIndex = new System.Windows.Forms.Label();
+            this.button9 = new System.Windows.Forms.Button();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -61,13 +74,17 @@
             this.checkBox4 = new System.Windows.Forms.CheckBox();
             this.checkBox5 = new System.Windows.Forms.CheckBox();
             this.panel2 = new System.Windows.Forms.Panel();
+            this.checkBox7 = new System.Windows.Forms.CheckBox();
             this.panel3 = new System.Windows.Forms.Panel();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
+            this.panelTracks = new System.Windows.Forms.Panel();
+            this.checkBox8 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.panel2.SuspendLayout();
             this.panel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
+            this.panelTracks.SuspendLayout();
             this.SuspendLayout();
             // 
             // checkedListBox1
@@ -188,7 +205,7 @@
             // 
             this.label4.AllowDrop = true;
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(3, 73);
+            this.label4.Location = new System.Drawing.Point(3, 91);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(48, 15);
             this.label4.TabIndex = 16;
@@ -301,7 +318,7 @@
             // 
             // button5
             // 
-            this.button5.Location = new System.Drawing.Point(1403, 507);
+            this.button5.Location = new System.Drawing.Point(1404, 563);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(129, 23);
             this.button5.TabIndex = 26;
@@ -310,6 +327,164 @@
         "Add Buggies\" button.)");
             this.button5.UseVisualStyleBackColor = true;
             this.button5.Click += new System.EventHandler(this.button5_Click);
+            // 
+            // button6
+            // 
+            this.button6.Location = new System.Drawing.Point(228, 13);
+            this.button6.Name = "button6";
+            this.button6.Size = new System.Drawing.Size(129, 23);
+            this.button6.TabIndex = 27;
+            this.button6.Text = "Edit Splines";
+            this.toolTip1.SetToolTip(this.button6, "Writes the map, trees, and selected buggies to the selected save slot. (Same as \"" +
+        "Add Buggies\" button.)");
+            this.button6.UseVisualStyleBackColor = true;
+            this.button6.Visible = false;
+            this.button6.Click += new System.EventHandler(this.button6_Click);
+            // 
+            // checkBox6
+            // 
+            this.checkBox6.Appearance = System.Windows.Forms.Appearance.Button;
+            this.checkBox6.AutoSize = true;
+            this.checkBox6.Location = new System.Drawing.Point(1423, 532);
+            this.checkBox6.Name = "checkBox6";
+            this.checkBox6.Size = new System.Drawing.Size(92, 25);
+            this.checkBox6.TabIndex = 28;
+            this.checkBox6.Text = "Edit Splines     ";
+            this.checkBox6.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.toolTip1.SetToolTip(this.checkBox6, "Use the mouse to paint in trees within the selected radius.");
+            this.checkBox6.UseVisualStyleBackColor = true;
+            this.checkBox6.CheckedChanged += new System.EventHandler(this.checkBox6_CheckedChanged);
+            // 
+            // labelTrackType
+            // 
+            this.labelTrackType.AllowDrop = true;
+            this.labelTrackType.AutoSize = true;
+            this.labelTrackType.Font = new System.Drawing.Font("Segoe UI", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.labelTrackType.Location = new System.Drawing.Point(3, 76);
+            this.labelTrackType.Name = "labelTrackType";
+            this.labelTrackType.Size = new System.Drawing.Size(68, 12);
+            this.labelTrackType.TabIndex = 26;
+            this.labelTrackType.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.labelTrackType, "Click to change the type of segment");
+            // 
+            // label10
+            // 
+            this.label10.AllowDrop = true;
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(12, 8);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(62, 15);
+            this.label10.TabIndex = 25;
+            this.label10.Text = "Track Stuff";
+            this.toolTip1.SetToolTip(this.label10, "This file contains buggies you want to add into the map file. Note they will be a" +
+        "dded keeping their position, cargo, etc. \\nSo if you try to add duplicates they " +
+        "are likely to yeet.");
+            // 
+            // checkBoxRemoveTrack
+            // 
+            this.checkBoxRemoveTrack.Appearance = System.Windows.Forms.Appearance.Button;
+            this.checkBoxRemoveTrack.AutoSize = true;
+            this.checkBoxRemoveTrack.Location = new System.Drawing.Point(57, 32);
+            this.checkBoxRemoveTrack.Name = "checkBoxRemoveTrack";
+            this.checkBoxRemoveTrack.Size = new System.Drawing.Size(60, 25);
+            this.checkBoxRemoveTrack.TabIndex = 22;
+            this.checkBoxRemoveTrack.Text = "Remove";
+            this.toolTip1.SetToolTip(this.checkBoxRemoveTrack, "Use the mouse to remove the highlighted track.");
+            this.checkBoxRemoveTrack.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxAddTrack
+            // 
+            this.checkBoxAddTrack.Appearance = System.Windows.Forms.Appearance.Button;
+            this.checkBoxAddTrack.AutoSize = true;
+            this.checkBoxAddTrack.Location = new System.Drawing.Point(12, 32);
+            this.checkBoxAddTrack.Name = "checkBoxAddTrack";
+            this.checkBoxAddTrack.Size = new System.Drawing.Size(39, 25);
+            this.checkBoxAddTrack.TabIndex = 21;
+            this.checkBoxAddTrack.Text = "Add";
+            this.checkBoxAddTrack.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.toolTip1.SetToolTip(this.checkBoxAddTrack, "Use the mouse to add a track point-by-point");
+            this.checkBoxAddTrack.UseVisualStyleBackColor = true;
+            // 
+            // labelTrackGrade
+            // 
+            this.labelTrackGrade.AllowDrop = true;
+            this.labelTrackGrade.AutoSize = true;
+            this.labelTrackGrade.Location = new System.Drawing.Point(3, 91);
+            this.labelTrackGrade.Name = "labelTrackGrade";
+            this.labelTrackGrade.Size = new System.Drawing.Size(83, 15);
+            this.labelTrackGrade.TabIndex = 27;
+            this.labelTrackGrade.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.labelTrackGrade, "Highest and lowest grade on this segment");
+            // 
+            // label9
+            // 
+            this.label9.AllowDrop = true;
+            this.label9.AutoSize = true;
+            this.label9.Font = new System.Drawing.Font("Segoe UI", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label9.Location = new System.Drawing.Point(3, 139);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(57, 11);
+            this.label9.TabIndex = 28;
+            this.label9.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.label9, "Coordinates of starting point");
+            // 
+            // label11
+            // 
+            this.label11.AllowDrop = true;
+            this.label11.AutoSize = true;
+            this.label11.Font = new System.Drawing.Font("Segoe UI", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label11.Location = new System.Drawing.Point(3, 155);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(57, 11);
+            this.label11.TabIndex = 29;
+            this.label11.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.label11, "Coordinates of first tangent");
+            // 
+            // label12
+            // 
+            this.label12.AllowDrop = true;
+            this.label12.AutoSize = true;
+            this.label12.Font = new System.Drawing.Font("Segoe UI", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label12.Location = new System.Drawing.Point(3, 170);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(57, 11);
+            this.label12.TabIndex = 30;
+            this.label12.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.label12, "Coordinates of end tangent");
+            // 
+            // label13
+            // 
+            this.label13.AllowDrop = true;
+            this.label13.AutoSize = true;
+            this.label13.Font = new System.Drawing.Font("Segoe UI", 6F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.label13.Location = new System.Drawing.Point(3, 185);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(57, 11);
+            this.label13.TabIndex = 31;
+            this.label13.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.label13, "Coordinates of end point");
+            // 
+            // labelSplineIndex
+            // 
+            this.labelSplineIndex.AllowDrop = true;
+            this.labelSplineIndex.AutoSize = true;
+            this.labelSplineIndex.Location = new System.Drawing.Point(3, 60);
+            this.labelSplineIndex.Name = "labelSplineIndex";
+            this.labelSplineIndex.Size = new System.Drawing.Size(83, 15);
+            this.labelSplineIndex.TabIndex = 32;
+            this.labelSplineIndex.Text = "None Selected";
+            this.toolTip1.SetToolTip(this.labelSplineIndex, "Click to change the type of segment");
+            // 
+            // button9
+            // 
+            this.button9.Location = new System.Drawing.Point(14, 202);
+            this.button9.Name = "button9";
+            this.button9.Size = new System.Drawing.Size(87, 23);
+            this.button9.TabIndex = 28;
+            this.button9.Text = "Remove All";
+            this.toolTip1.SetToolTip(this.button9, "Replants all trees on the map, including around the industries.");
+            this.button9.UseVisualStyleBackColor = true;
+            this.button9.Click += new System.EventHandler(this.button9_Click);
             // 
             // openFileDialog1
             // 
@@ -351,7 +526,7 @@
             this.checkBox1.AutoSize = true;
             this.checkBox1.Checked = true;
             this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox1.Location = new System.Drawing.Point(3, 109);
+            this.checkBox1.Location = new System.Drawing.Point(3, 119);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(84, 19);
             this.checkBox1.TabIndex = 13;
@@ -362,8 +537,6 @@
             // checkBox2
             // 
             this.checkBox2.AutoSize = true;
-            this.checkBox2.Checked = true;
-            this.checkBox2.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox2.Location = new System.Drawing.Point(3, 134);
             this.checkBox2.Name = "checkBox2";
             this.checkBox2.Size = new System.Drawing.Size(108, 19);
@@ -377,7 +550,7 @@
             this.checkBox3.AutoSize = true;
             this.checkBox3.Checked = true;
             this.checkBox3.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox3.Location = new System.Drawing.Point(0, 51);
+            this.checkBox3.Location = new System.Drawing.Point(0, 30);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(90, 19);
             this.checkBox3.TabIndex = 15;
@@ -414,6 +587,8 @@
             // panel2
             // 
             this.panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel2.Controls.Add(this.checkBox8);
+            this.panel2.Controls.Add(this.checkBox7);
             this.panel2.Controls.Add(this.checkBox5);
             this.panel2.Controls.Add(this.checkBox4);
             this.panel2.Controls.Add(this.label6);
@@ -428,9 +603,22 @@
             this.panel2.TabIndex = 14;
             this.panel2.Paint += new System.Windows.Forms.PaintEventHandler(this.panel2_Paint);
             // 
+            // checkBox7
+            // 
+            this.checkBox7.AutoSize = true;
+            this.checkBox7.Checked = true;
+            this.checkBox7.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox7.Location = new System.Drawing.Point(-1, 51);
+            this.checkBox7.Name = "checkBox7";
+            this.checkBox7.Size = new System.Drawing.Size(94, 19);
+            this.checkBox7.TabIndex = 21;
+            this.checkBox7.Text = "Show Grades";
+            this.checkBox7.UseVisualStyleBackColor = true;
+            // 
             // panel3
             // 
             this.panel3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel3.Controls.Add(this.button9);
             this.panel3.Controls.Add(this.label8);
             this.panel3.Controls.Add(this.trackBar1);
             this.panel3.Controls.Add(this.label7);
@@ -440,7 +628,7 @@
             this.panel3.Controls.Add(this.checkBoxAddTrees);
             this.panel3.Location = new System.Drawing.Point(1403, 280);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(131, 209);
+            this.panel3.Size = new System.Drawing.Size(131, 235);
             this.panel3.TabIndex = 25;
             // 
             // trackBar1
@@ -456,11 +644,45 @@
             this.trackBar1.Value = 5;
             this.trackBar1.Scroll += new System.EventHandler(this.trackBar1_Scroll);
             // 
+            // panelTracks
+            // 
+            this.panelTracks.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panelTracks.Controls.Add(this.labelSplineIndex);
+            this.panelTracks.Controls.Add(this.label13);
+            this.panelTracks.Controls.Add(this.label12);
+            this.panelTracks.Controls.Add(this.label11);
+            this.panelTracks.Controls.Add(this.label9);
+            this.panelTracks.Controls.Add(this.labelTrackGrade);
+            this.panelTracks.Controls.Add(this.labelTrackType);
+            this.panelTracks.Controls.Add(this.label10);
+            this.panelTracks.Controls.Add(this.checkBoxRemoveTrack);
+            this.panelTracks.Controls.Add(this.checkBoxAddTrack);
+            this.panelTracks.Location = new System.Drawing.Point(1402, 280);
+            this.panelTracks.Name = "panelTracks";
+            this.panelTracks.Size = new System.Drawing.Size(131, 235);
+            this.panelTracks.TabIndex = 29;
+            this.panelTracks.Visible = false;
+            // 
+            // checkBox8
+            // 
+            this.checkBox8.AutoSize = true;
+            this.checkBox8.Checked = true;
+            this.checkBox8.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox8.Location = new System.Drawing.Point(0, 68);
+            this.checkBox8.Name = "checkBox8";
+            this.checkBox8.Size = new System.Drawing.Size(87, 19);
+            this.checkBox8.TabIndex = 22;
+            this.checkBox8.Text = "Show Types";
+            this.checkBox8.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1679, 880);
+            this.Controls.Add(this.panelTracks);
+            this.Controls.Add(this.checkBox6);
+            this.Controls.Add(this.button6);
             this.Controls.Add(this.button5);
             this.Controls.Add(this.panel3);
             this.Controls.Add(this.pictureBox2);
@@ -476,6 +698,7 @@
             this.Controls.Add(this.label1);
             this.Controls.Add(this.pictureBox1);
             this.Controls.Add(this.checkedListBox1);
+            this.KeyPreview = true;
             this.Name = "Form1";
             this.Text = "Buggy Exchanger";
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form1_KeyDown);
@@ -486,6 +709,8 @@
             this.panel3.ResumeLayout(false);
             this.panel3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).EndInit();
+            this.panelTracks.ResumeLayout(false);
+            this.panelTracks.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -526,5 +751,21 @@
         private Label label8;
         private TrackBar trackBar1;
         private Button button5;
+        private Button button6;
+        private CheckBox checkBox6;
+        private Panel panelTracks;
+        private Label label13;
+        private Label label12;
+        private Label label11;
+        private Label label9;
+        private Label labelTrackGrade;
+        private Label labelTrackType;
+        private Label label10;
+        private CheckBox checkBoxRemoveTrack;
+        private CheckBox checkBoxAddTrack;
+        private Label labelSplineIndex;
+        private CheckBox checkBox7;
+        private Button button9;
+        private CheckBox checkBox8;
     }
 }
