@@ -586,7 +586,7 @@ namespace BuggyExchange
             int pos = found + offset;
             for (int i = 0; i < numTargetCars; i++)
             { //for each car, check to see if there is a name or not
-                Debug.WriteLine("Checking @ " + pos.ToString());
+                //Debug.WriteLine("Checking @ " + pos.ToString());
                 int strlen = Convert.ToInt32(buff2[pos]);
                 if (strlen == 0)
                 {
@@ -595,21 +595,43 @@ namespace BuggyExchange
                 }
                 else //this one has a string associated with it
                 {
-                    // check for a specific type of corrupted data that came with new saves in the beta:
                     if (Convert.ToInt32(buff2[pos]) == 1)
                     {
-                        MessageBox.Show("Note: Possible Name corruption (buggy number " + i.ToString() + " of " + numTargetCars.ToString() + ") detected in save. If this operation fails you should load a copy of this save in ROSE to rename the buggies.\nLook for one that might have a <br> or other odd characters in it, or count in the list up from zero to the number supplied earlier.");
-                        //find the next instance of "FF" and then back up 4 spaces:
-                        for (int k = pos; k < buff2.Length; k++)
+                        //This is whree we have detected a special string that requires more processing to deal with:
+                        //check to see if it matches our special header block:
+                        byte[] specialHeader = new byte[] { 0x01, 0x00, 0x00, 0x00, 0x03, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x21, 0x00, 0x00, 0x00, 0x35, 0x36, 0x46, 0x38, 0x44, 0x32, 0x37, 0x31, 0x34, 0x39, 0x43, 0x43, 0x35, 0x45, 0x32, 0x44, 0x31, 0x32, 0x31, 0x30, 0x33, 0x42, 0x42, 0x45, 0x42, 0x46, 0x43, 0x41, 0x39, 0x30, 0x39, 0x37, 0x00, 0x0B, 0x00, 0x00, 0x00, 0x7B, 0x30, 0x7D, 0x3C, 0x62, 0x72, 0x3E, 0x7B, 0x31, 0x7D, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x30, 0x00, 0x04, 0x02, 0x00, 0x00, 0x00, 0xFF };
+                        byte[] specialTrailer = new byte[] { 0x02, 0x00, 0x00, 0x00, 0x31, 0x00, 0x04, 0x02, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00 };
+                        int m = 0;
+                        for (int k = pos; k < buff2.Length && m < specialHeader.Length; k++)
                         {
-                            if (buff2[k] == 255)
+                            if (buff2[k] != specialHeader[m])
                             {
-                                pos = k - 4;
+                                MessageBox.Show("Failed to parse Rolling Stock Name. If this operation fails you can try loading a copy of this save in ROSE to rename the buggies.");
                                 break;
                             }
+                            m++;
                         }
-                        //create a blank name for this one
-                        arrTemp[i] = new byte[] { 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00 };
+                        //if the header is correct, we can get the data and stuff it into a byte array as usual
+                        //but first we need toi detect a zero-length string
+                        int detect = Convert.ToInt32(buff2[pos + specialHeader.Length]);
+                        if (detect == 1)
+                        {
+                            int tlen = Convert.ToInt32(buff2[pos + specialHeader.Length + 4]); //length of the string and trailer
+                            Debug.WriteLine("Tlen= " + tlen);
+                            arrTemp[i] = new byte[specialHeader.Length + 8 + tlen + specialTrailer.Length]; //the 4 is the length of the 4 digits used to store the length value
+                            for (int j = 0; j < arrTemp[i].Length; j++)
+                                arrTemp[i][j] = buff2[pos + j];
+                            pos += arrTemp[i].Length;
+                        }//otherwise it's a zero-length, has to be handled differently
+                        else
+                        {
+                            Debug.WriteLine("BLANK ");
+                            arrTemp[i] = new byte[specialHeader.Length + 4 + specialTrailer.Length]; //the 4 is the length of the 4 digits used to store the length value
+                            for (int j = 0; j < arrTemp[i].Length; j++)
+                                arrTemp[i][j] = buff2[pos + j];
+                            pos += arrTemp[i].Length;
+                        }
+
                     }
                     else
                     {
@@ -620,6 +642,32 @@ namespace BuggyExchange
                             arrTemp[i][j] = buff2[pos + j];
                         pos += 13 + tlen;
                     }
+
+                    //// check for a specific type of corrupted data that came with new saves in the beta:
+                    //if (Convert.ToInt32(buff2[pos]) == 1)
+                    //{
+                    //    MessageBox.Show("Note: Possible Name corruption (buggy number " + i.ToString() + " of " + numTargetCars.ToString() + ") detected in save. If this operation fails you should load a copy of this save in ROSE to rename the buggies.\nLook for one that might have a <br> or other odd characters in it, or count in the list up from zero to the number supplied earlier.");
+                    //    //find the next instance of "FF" and then back up 4 spaces:
+                    //    for (int k = pos; k < buff2.Length; k++)
+                    //    {
+                    //        if (buff2[k] == 255)
+                    //        {
+                    //            pos = k - 4;
+                    //            break;
+                    //        }
+                    //    }
+                    //    //create a blank name for this one
+                    //    arrTemp[i] = new byte[] { 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00 };
+                    //}
+                    //else
+                    //{
+                    //    //get the length of the string and all:
+                    //    int tlen = Convert.ToInt32(buff2[pos + 9]); //length of the string and trailer
+                    //    arrTemp[i] = new byte[13 + tlen];
+                    //    for (int j = 0; j < 13 + tlen; j++)
+                    //        arrTemp[i][j] = buff2[pos + j];
+                    //    pos += 13 + tlen;
+                    //}
 
 
                 }

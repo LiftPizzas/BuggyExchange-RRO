@@ -63,6 +63,7 @@
             this.label13 = new System.Windows.Forms.Label();
             this.labelSplineIndex = new System.Windows.Forms.Label();
             this.button9 = new System.Windows.Forms.Button();
+            this.button10 = new System.Windows.Forms.Button();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -74,11 +75,11 @@
             this.checkBox4 = new System.Windows.Forms.CheckBox();
             this.checkBox5 = new System.Windows.Forms.CheckBox();
             this.panel2 = new System.Windows.Forms.Panel();
+            this.checkBox8 = new System.Windows.Forms.CheckBox();
             this.checkBox7 = new System.Windows.Forms.CheckBox();
             this.panel3 = new System.Windows.Forms.Panel();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.panelTracks = new System.Windows.Forms.Panel();
-            this.checkBox8 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox2)).BeginInit();
             this.panel2.SuspendLayout();
@@ -242,9 +243,10 @@
             // 
             // button7
             // 
-            this.button7.Location = new System.Drawing.Point(12, 173);
+            this.button7.Font = new System.Drawing.Font("Segoe UI", 6.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.button7.Location = new System.Drawing.Point(3, 207);
             this.button7.Name = "button7";
-            this.button7.Size = new System.Drawing.Size(87, 23);
+            this.button7.Size = new System.Drawing.Size(59, 23);
             this.button7.TabIndex = 24;
             this.button7.Text = "Plant All";
             this.toolTip1.SetToolTip(this.button7, "Replants all trees on the map, including around the industries.");
@@ -477,14 +479,27 @@
             // 
             // button9
             // 
-            this.button9.Location = new System.Drawing.Point(14, 202);
+            this.button9.Font = new System.Drawing.Font("Segoe UI", 6.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.button9.Location = new System.Drawing.Point(62, 207);
             this.button9.Name = "button9";
-            this.button9.Size = new System.Drawing.Size(87, 23);
+            this.button9.Size = new System.Drawing.Size(64, 23);
             this.button9.TabIndex = 28;
             this.button9.Text = "Remove All";
             this.toolTip1.SetToolTip(this.button9, "Replants all trees on the map, including around the industries.");
             this.button9.UseVisualStyleBackColor = true;
             this.button9.Click += new System.EventHandler(this.button9_Click);
+            // 
+            // button10
+            // 
+            this.button10.Location = new System.Drawing.Point(12, 175);
+            this.button10.Name = "button10";
+            this.button10.Size = new System.Drawing.Size(87, 23);
+            this.button10.TabIndex = 29;
+            this.button10.Text = "Thinning";
+            this.toolTip1.SetToolTip(this.button10, "Trims trees away from tracks using the given radius. This does not currently clea" +
+        "n up the industries.");
+            this.button10.UseVisualStyleBackColor = true;
+            this.button10.Click += new System.EventHandler(this.button10_Click);
             // 
             // openFileDialog1
             // 
@@ -603,6 +618,18 @@
             this.panel2.TabIndex = 14;
             this.panel2.Paint += new System.Windows.Forms.PaintEventHandler(this.panel2_Paint);
             // 
+            // checkBox8
+            // 
+            this.checkBox8.AutoSize = true;
+            this.checkBox8.Checked = true;
+            this.checkBox8.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox8.Location = new System.Drawing.Point(0, 68);
+            this.checkBox8.Name = "checkBox8";
+            this.checkBox8.Size = new System.Drawing.Size(87, 19);
+            this.checkBox8.TabIndex = 22;
+            this.checkBox8.Text = "Show Types";
+            this.checkBox8.UseVisualStyleBackColor = true;
+            // 
             // checkBox7
             // 
             this.checkBox7.AutoSize = true;
@@ -618,6 +645,7 @@
             // panel3
             // 
             this.panel3.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panel3.Controls.Add(this.button10);
             this.panel3.Controls.Add(this.button9);
             this.panel3.Controls.Add(this.label8);
             this.panel3.Controls.Add(this.trackBar1);
@@ -657,23 +685,11 @@
             this.panelTracks.Controls.Add(this.label10);
             this.panelTracks.Controls.Add(this.checkBoxRemoveTrack);
             this.panelTracks.Controls.Add(this.checkBoxAddTrack);
-            this.panelTracks.Location = new System.Drawing.Point(1402, 280);
+            this.panelTracks.Location = new System.Drawing.Point(1403, 280);
             this.panelTracks.Name = "panelTracks";
             this.panelTracks.Size = new System.Drawing.Size(131, 235);
             this.panelTracks.TabIndex = 29;
             this.panelTracks.Visible = false;
-            // 
-            // checkBox8
-            // 
-            this.checkBox8.AutoSize = true;
-            this.checkBox8.Checked = true;
-            this.checkBox8.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox8.Location = new System.Drawing.Point(0, 68);
-            this.checkBox8.Name = "checkBox8";
-            this.checkBox8.Size = new System.Drawing.Size(87, 19);
-            this.checkBox8.TabIndex = 22;
-            this.checkBox8.Text = "Show Types";
-            this.checkBox8.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -767,5 +783,6 @@
         private CheckBox checkBox7;
         private Button button9;
         private CheckBox checkBox8;
+        private Button button10;
     }
 }

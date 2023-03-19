@@ -168,8 +168,16 @@ namespace BuggyExchange
             else
             {
                 for (i = 0; i < numSourceCars; i++)
-                    if (FrameNameArray[i].Length > 9)
-                        carShortName[i] = Encoding.ASCII.GetString(FrameNameArray[i], 13, FrameNameArray[i].Length - 14);
+                    if (FrameNameArray[i].Length == 102) carShortName[i] = "";
+                    else
+                    {
+                        if (FrameNameArray[i].Length > 106)
+                            carShortName[i] = Encoding.ASCII.GetString(FrameNameArray[i], 90, FrameNameArray[i].Length - 107);
+                        else
+                            if (FrameNameArray[i].Length > 9)
+                                carShortName[i] = Encoding.ASCII.GetString(FrameNameArray[i], 13, FrameNameArray[i].Length - 14);
+                    }
+                    
             }
 
             //Debug.WriteLine("Getting Cargo:");
